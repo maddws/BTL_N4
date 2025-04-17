@@ -19,7 +19,7 @@ export default function DiseasesScreen() {
 
   const handleDiseasePress = (id: string) => {
     router.push({
-      pathname: '/disease-details',
+      pathname: '/main/disease/disease-details',
       params: { id }
     });
   };
