@@ -37,7 +37,7 @@ export default function ShopScreen() {
 
       <TouchableOpacity 
         style={styles.searchBar}
-        onPress={() => router.push('/search')}
+        onPress={() => router.push('/main/shop/search')}
       >
         <Search size={20} color={Colors.textLight} />
         <Text style={styles.searchPlaceholder}>Tìm kiếm sản phẩm...</Text>
@@ -45,7 +45,7 @@ export default function ShopScreen() {
 
         <TouchableOpacity 
           style={styles.cartButton}
-          onPress={() => router.push('/cart')}
+          onPress={() => router.push('/main/shop/cart')}
         >
           <ShoppingCart size={24} color={Colors.text} />
           {cartItemCount > 0 && (
@@ -88,7 +88,7 @@ export default function ShopScreen() {
           <ProductItem 
             product={item} 
             onPress={() => router.push({
-              pathname: '/product-details',
+              pathname: '/main/shop/product-details',
               params: { id: item.id }
             })}
           />

@@ -46,14 +46,14 @@ export default function HomeScreen() {
             title="Theo dõi sức khỏe" 
             icon={<Activity size={20} color={Colors.primary} />}
             description="Ghi lại các chỉ số sức khỏe của thú cưng"
-            onPress={() => router.push('/health')}
+            onPress={() => router.push('/main/health/health')}
           />
 
           <HomeCard 
             title="Lịch tiêm phòng" 
             icon={<Syringe size={20} color={Colors.primary} />}
             description="Quản lý lịch tiêm phòng và nhắc nhở"
-            onPress={() => router.push('/vaccinations')}
+            onPress={() => router.push('/main/vaccination/vaccinations')}
           >
             {upcomingVaccinations.length > 0 ? (
               <>
@@ -63,7 +63,7 @@ export default function HomeScreen() {
                 {upcomingVaccinations.length > 2 && (
                   <TouchableOpacity 
                     style={styles.viewMoreButton}
-                    onPress={() => router.push('/vaccinations')}
+                    onPress={() => router.push('/main/vaccination/vaccinations')}
                   >
                     <Text style={styles.viewMoreText}>Xem thêm</Text>
                     <ChevronRight size={16} color={Colors.primary} />
@@ -79,7 +79,7 @@ export default function HomeScreen() {
             title="Nhắc nhở chăm sóc" 
             icon={<Bell size={20} color={Colors.primary} />}
             description="Đặt lịch nhắc cho các hoạt động chăm sóc"
-            onPress={() => router.push('/reminders')}
+            onPress={() => router.push('/main/reminder/reminders')}
           >
             {upcomingReminders.length > 0 ? (
               <>
@@ -89,7 +89,7 @@ export default function HomeScreen() {
                 {upcomingReminders.length > 2 && (
                   <TouchableOpacity 
                     style={styles.viewMoreButton}
-                    onPress={() => router.push('/reminders')}
+                    onPress={() => router.push('/main/reminder/reminders')}
                   >
                     <Text style={styles.viewMoreText}>Xem thêm</Text>
                     <ChevronRight size={16} color={Colors.primary} />
@@ -112,7 +112,7 @@ export default function HomeScreen() {
             title="Tương tác" 
             icon={<Gamepad size={20} color={Colors.primary} />}
             description="Các trò chơi và hoạt động tương tác"
-            onPress={() => router.push('/interactive')}
+            onPress={() => router.push('/main/interactive/music-player')}
           />
 
           {/* Additional Features */}
@@ -121,7 +121,7 @@ export default function HomeScreen() {
           <View style={styles.additionalFeatures}>
             <TouchableOpacity 
               style={styles.additionalFeatureItem}
-              onPress={() => router.push('/nutrition')}
+              onPress={() => router.push('/main/nutrition/nutrition')}
             >
               <View style={styles.additionalFeatureIcon}>
                 <Apple size={20} color={Colors.primary} />
@@ -131,7 +131,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity 
               style={styles.additionalFeatureItem}
-              onPress={() => router.push('/diseases')}
+              onPress={() => router.push('/main/disease/diseases')}
             >
               <View style={styles.additionalFeatureIcon}>
                 <Stethoscope size={20} color={Colors.primary} />
@@ -141,7 +141,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity 
               style={styles.additionalFeatureItem}
-              onPress={() => router.push('/medical-records')}
+              onPress={() => router.push('/main/medical-documents/medical-records')}
             >
               <View style={styles.additionalFeatureIcon}>
                 <FileText size={20} color={Colors.primary} />

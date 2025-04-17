@@ -56,7 +56,7 @@ export default function HealthScreen() {
                 <Text style={styles.recordsTitle}>Lịch sử khám bệnh</Text>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-health-record')}
+                  onPress={() => router.push('./add-health-record')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -70,7 +70,7 @@ export default function HealthScreen() {
                       key={record.id} 
                       style={styles.recordItem}
                       onPress={() => router.push({
-                        pathname: '/health-record-details',
+                        pathname: './health-record-details',
                         params: { id: record.id }
                       })}
                     >
