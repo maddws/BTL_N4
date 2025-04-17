@@ -101,7 +101,7 @@ export default function CommunityScreen() {
           <View style={styles.createPostContainer}>
             <TouchableOpacity 
               style={styles.createPostButton}
-              onPress={() => router.push('/create-post')}
+              onPress={() => router.push('/main/community/create-post')}
             >
               <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
               <Plus size={20} color={Colors.primary} />
@@ -118,7 +118,7 @@ export default function CommunityScreen() {
                 key={post.id} 
                 post={post} 
                 onPress={() => router.push({
-                  pathname: '/post-details',
+                  pathname: '/main/community/post-details',
                   params: { id: post.id }
                 })}
               />
@@ -271,7 +271,7 @@ export default function CommunityScreen() {
                 key={post.id} 
                 post={post} 
                 onPress={() => router.push({
-                  pathname: '/post-details',
+                  pathname: '/main/community/post-details',
                   params: { id: post.id }
                 })}
               />

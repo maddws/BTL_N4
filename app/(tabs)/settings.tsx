@@ -38,11 +38,11 @@ export default function SettingsScreen() {
   };
 
   const handleViewProfile = () => {
-    router.push('/profile-details');
+    router.push('/main/profile/profile-details');
   };
 
   const handleLogin = () => {
-    router.push('/login');
+    router.push('/auth/login');
   };
 
   return (
