@@ -17,11 +17,10 @@ import Colors from '@/constants/colors';
 import { useSettingsStore, Language } from '@/store/settings-store';
 import { useAuth } from '@/context/AuthContext';
 
-const {signOut} = useAuth();
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const {signOut} = useAuth();
   const { 
     language, 
     darkMode, 
