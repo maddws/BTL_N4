@@ -66,7 +66,7 @@ export default function RemindersScreen() {
                 <Text style={styles.remindersTitle}>Danh sách nhắc nhở</Text>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-reminder')}
+                  onPress={() => router.push('./add-reminder')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -82,7 +82,7 @@ export default function RemindersScreen() {
                         <TouchableOpacity 
                           key={reminder.id}
                           onPress={() => router.push({
-                            pathname: '/reminder-details',
+                            pathname: './reminder-details',
                             params: { id: reminder.id }
                           })}
                         >

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { usePetStore } from '@/store/pet-store';
 import Colors from '@/constants/colors';
 import { Plus, ChevronDown, Search, X } from 'lucide-react-native';
+import colors from '@/constants/colors';
 
 export default function PetSelector() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function PetSelector() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddPet = () => {
-    router.push('/add-pet');
+    router.push('/main/pet/add-pet');
     setDropdownVisible(false);
   };
 
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dropdownButton: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.warning,
     borderRadius: 12,
     padding: 12,
     shadowColor: '#000',

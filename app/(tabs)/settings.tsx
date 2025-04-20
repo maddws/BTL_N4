@@ -15,9 +15,13 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useSettingsStore, Language } from '@/store/settings-store';
+import { useAuth } from '@/context/AuthContext';
+
+const {signOut} = useAuth();
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const { 
     language, 
     darkMode, 
@@ -27,7 +31,7 @@ export default function SettingsScreen() {
     setLanguage,
     toggleDarkMode,
     updateNotificationSetting,
-    logout
+    //logout
   } = useSettingsStore();
 
   const [showLanguageOptions, setShowLanguageOptions] = useState(false);
@@ -42,7 +46,7 @@ export default function SettingsScreen() {
   };
 
   const handleLogin = () => {
-    router.push('/auth/login');
+    router.push('/(auth)/login');
   };
 
   return (
@@ -241,7 +245,7 @@ export default function SettingsScreen() {
         {isLoggedIn && (
           <TouchableOpacity 
             style={styles.logoutButton}
-            onPress={logout}
+            onPress={signOut}
           >
             <LogOut size={20} color={Colors.error} />
             <Text style={styles.logoutText}>Đăng xuất</Text>

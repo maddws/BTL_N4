@@ -5,10 +5,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type Language = 'vi' | 'en';
 
 export interface UserProfile {
-  name: string;
-  email: string;
-  phone: string;
-  avatar?: string;
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    avatar?: string;
 }
 
 export interface NotificationSettings {
