@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+// CommunityScreen.tsx
+import React, { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard
-} from "react-native";
-
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MessageCircle, Users, Plus } from 'lucide-react-native';
@@ -14,275 +16,167 @@ import Colors from '@/constants/colors';
 import PostItem from '@/components/PostItem';
 import { useCommunityStore } from '@/store/community-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 
 type Tab = 'feed' | 'chat' | 'saved';
 
-const doctors = [
-  {
-    id: 'vet1',
-    name: 'Bác sĩ Nguyễn Văn A',
-    specialty: 'Chuyên khoa thú nhỏ',
-    avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
-    status: 'online'
-  },
-  {
-    id: 'vet2',
-    name: 'Bác sĩ Trần Thị B',
-    specialty: 'Chuyên khoa dinh dưỡng',
-    avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f',
-    status: 'offline'
-  },
-  {
-    id: 'vet3',
-    name: 'Bác sĩ Lê Văn C',
-    specialty: 'Chuyên khoa ngoại',
-    avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d',
-    status: 'online'
-  },
-  {
-    id: 'vet4',
-    name: 'Bác sĩ Phạm Thị D',
-    specialty: 'Chuyên khoa da liễu',
-    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2',
-    status: 'offline'
-  }
-];
+// **CHANGE THIS** to your actual doctor UID
+const DOCTOR_ID = 'U3J9nEV500hMEr5iC6mX';
 
 export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('feed');
-  const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
+  const [peers, setPeers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { posts } = useCommunityStore();
-  const { userProfile } = useSettingsStore();
+  const { userProfile } = useSettingsStore(); // expects { id: string, ... }
 
-  const handleSelectDoctor = (doctorId: string) => {
-    setSelectedDoctor(doctorId);
-  };
+  // load list of chat‑peers whenever we switch to "chat"
+  useEffect(() => {
+    if (activeTab !== 'chat' || !userProfile?.id) {
+      setPeers([]);
+      return;
+    }
+    setLoading(true);
+    getDocs(collection(db, 'Users'))
+      .then(snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (userProfile.id !== DOCTOR_ID) {
+          // patient: only show the doctor
+          setPeers(all.filter(u => u.id === DOCTOR_ID));
+        } else {
+          // doctor: show everyone except themselves
+          setPeers(all.filter(u => u.id !== DOCTOR_ID));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [activeTab, userProfile]);
 
-  const selectedDoctorData = doctors.find(doc => doc.id === selectedDoctor);
+  const renderFeed = () => (
+    <>
+      <View style={styles.createPostContainer}>
+        <TouchableOpacity
+          style={styles.createPostButton}
+          onPress={() => router.push('/main/community/create-post')}
+        >
+          <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
+          <Plus size={20} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {posts.map(p => (
+          <PostItem
+            key={p.id}
+            post={p}
+            onPress={() =>
+              router.push({
+                pathname: '/main/community/post-details',
+                params: { id: p.id }
+              })
+            }
+          />
+        ))}
+      </ScrollView>
+    </>
+  );
+
+  const renderChatList = () => (
+    <View style={styles.chatContainer}>
+      <Text style={styles.chatTitle}>Chọn người để chat</Text>
+      {loading
+        ? <ActivityIndicator style={{ marginTop: 20 }} />
+        : peers.map(peer => (
+          <TouchableOpacity
+            key={peer.id}
+            style={styles.peerItem}
+            onPress={() =>
+              router.push({
+                pathname: '/main/community/chat',
+                params: { peerId: peer.id }
+              })
+            }
+          >
+            <Image
+              source={{ uri: peer.profile_picture }}
+              style={styles.avatar}
+            />
+            <View style={styles.info}>
+              <Text style={styles.name}>{peer.username}</Text>
+              <Text style={styles.sub}>
+                {peer.id === DOCTOR_ID
+                  ? 'Bác sĩ'
+                  : peer.email}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: peer.status === 'online'
+                    ? Colors.success
+                    : Colors.textLight
+                }
+              ]}
+            />
+          </TouchableOpacity>
+        ))
+      }
+    </View>
+  );
+
+  const renderSaved = () => (
+    <ScrollView
+      style={styles.content}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {posts.filter(p => p.saved).map(p => (
+        <PostItem
+          key={p.id}
+          post={p}
+          onPress={() =>
+            router.push({
+              pathname: '/main/community/post-details',
+              params: { id: p.id }
+            })
+          }
+        />
+      ))}
+    </ScrollView>
+  );
 
   return (
-    <SafeAreaView style={styles.container} edges={['right', 'left']}>
-      <View style={styles.header}>
-      </View>
-
+    <SafeAreaView style={styles.container} edges={['right','left']}>
+      {/* Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'feed' && styles.activeTabButton]}
-          onPress={() => setActiveTab('feed')}
-        >
-          <Users size={20} color={activeTab === 'feed' ? Colors.primary : Colors.textLight} />
-          <Text style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
-            Bài viết
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'chat' && styles.activeTabButton]}
-          onPress={() => setActiveTab('chat')}
-        >
-          <MessageCircle size={20} color={activeTab === 'chat' ? Colors.primary : Colors.textLight} />
-          <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>
-            Tư vấn
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'saved' && styles.activeTabButton]}
-          onPress={() => setActiveTab('saved')}
-        >
-          <MessageCircle size={20} color={activeTab === 'saved' ? Colors.primary : Colors.textLight} />
-          <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
-            Đã lưu
-          </Text>
-        </TouchableOpacity>
-      </View>
+  {(['feed', 'chat', 'saved'] as Tab[]).map(t => (
+    <TouchableOpacity
+      key={t}
+      style={[styles.tabButton, activeTab === t && styles.activeTabButton]}
+      onPress={() => setActiveTab(t)}
+    >
+      {t === 'feed' && <Users size={20} color={activeTab === t ? Colors.primary : Colors.textLight} />}
+      {t === 'chat' && <MessageCircle size={20} color={activeTab === t ? Colors.primary : Colors.textLight} />}
+      {t === 'saved' && <MessageCircle size={20} color={activeTab === t ? Colors.primary : Colors.textLight} />}
+      <Text style={[styles.tabText, activeTab === t && styles.activeTabText]}>
+        {t === 'feed' ? 'Bài viết' : t === 'chat' ? 'Tư vấn' : 'Đã lưu'}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
-      {activeTab === 'feed' ? (
-        <>
-          <View style={styles.createPostContainer}>
-            <TouchableOpacity 
-              style={styles.createPostButton}
-              onPress={() => router.push('/main/community/create-post')}
-            >
-              <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
-              <Plus size={20} color={Colors.primary} />
-            </TouchableOpacity>
-          </View>
 
-          <ScrollView 
-            style={styles.content}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentContainer}
-          >
-            {posts.map(post => (
-              <PostItem 
-                key={post.id} 
-                post={post} 
-                onPress={() => router.push({
-                  pathname: '/main/community/post-details',
-                  params: { id: post.id }
-                })}
-              />
-            ))}
-          </ScrollView>
-        </>
-        
-      )  : activeTab === 'chat' ? (
-        <View style={styles.chatContainer}>
-          {!selectedDoctor ? (
-            <>
-              <Text style={styles.doctorsTitle}>Chọn bác sĩ để tư vấn</Text>
-              <ScrollView style={styles.doctorsList}>
-                {doctors.map(doctor => (
-                  <TouchableOpacity 
-                    key={doctor.id} 
-                    style={styles.doctorItem}
-                    onPress={() => handleSelectDoctor(doctor.id)}
-                  >
-                    <Image source={{ uri: doctor.avatar }} style={styles.doctorAvatar} />
-                    <View style={styles.doctorInfo}>
-                      <Text style={styles.doctorName}>{doctor.name}</Text>
-                      <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
-                    </View>
-                    <View style={[
-                      styles.statusIndicator, 
-                      doctor.status === 'online' ? styles.statusOnline : styles.statusOffline
-                    ]} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          ) : (
-            <>
-              <View style={styles.chatHeader}>
-                <TouchableOpacity 
-                  style={styles.backButton}
-                  onPress={() => setSelectedDoctor(null)}
-                >
-                  <Text style={styles.backButtonText}>Quay lại</Text>
-                </TouchableOpacity>
-                <View style={styles.doctorProfile}>
-                  <Image 
-                    source={{ uri: selectedDoctorData?.avatar }} 
-                    style={styles.chatDoctorAvatar} 
-                  />
-                  <View>
-                    <Text style={styles.chatDoctorName}>{selectedDoctorData?.name}</Text>
-                    <View style={styles.statusRow}>
-                      <View style={[
-                        styles.statusDot, 
-                        selectedDoctorData?.status === 'online' ? styles.statusOnline : styles.statusOffline
-                      ]} />
-                      <Text style={styles.statusText}>
-                        {selectedDoctorData?.status === 'online' ? 'Đang trực tuyến' : 'Ngoại tuyến'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <ScrollView 
-                style={styles.chatContent}
-                contentContainerStyle={styles.chatContentContainer}
-              >
-                <View style={styles.messageContainer}>
-                  <View style={styles.receivedMessage}>
-                    <Text style={styles.messageText}>
-                      Xin chào! Tôi là {selectedDoctorData?.name}. Tôi có thể giúp gì cho bạn và thú cưng của bạn hôm nay?
-                    </Text>
-                    <Text style={styles.messageTime}>10:30</Text>
-                  </View>
-                </View>
-
-                {userProfile && (
-                  <View style={styles.messageContainer}>
-                    <View style={styles.sentMessage}>
-                      <Text style={styles.messageText}>
-                        Chào bác sĩ, bé mèo nhà tôi dạo này biếng ăn và hay nằm một chỗ. Tôi nên làm gì ạ?
-                      </Text>
-                      <Text style={styles.messageTime}>10:35</Text>
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.messageContainer}>
-                  <View style={styles.receivedMessage}>
-                    <Text style={styles.messageText}>
-                      Bạn có thể cho tôi biết bé mèo bao nhiêu tuổi và tình trạng này kéo dài bao lâu rồi?
-                    </Text>
-                    <Text style={styles.messageTime}>10:40</Text>
-                  </View>
-                </View>
-
-                {userProfile && (
-                  <View style={styles.messageContainer}>
-                    <View style={styles.sentMessage}>
-                      <Text style={styles.messageText}>
-                        Bé mèo nhà tôi 3 tuổi, và tình trạng này mới xuất hiện khoảng 2 ngày nay ạ.
-                      </Text>
-                      <Text style={styles.messageTime}>10:45</Text>
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.messageContainer}>
-                  <View style={styles.receivedMessage}>
-                    <Text style={styles.messageText}>
-                      Bạn có thể kiểm tra nhiệt độ của bé không? Và bé có biểu hiện nôn mửa hoặc tiêu chảy không?
-                    </Text>
-                    <Text style={styles.messageTime}>10:50</Text>
-                  </View>
-                </View>
-              </ScrollView>
-
-                {/* <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
-                >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <SafeAreaView style={styles.container} edges={["right", "left"]}> */}
-                        {/* Nội dung cũ của bạn ở đây */}
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                        style={styles.input}
-                        placeholder="Nhập tin nhắn..."
-                        placeholderTextColor={Colors.textLight}
-                        multiline
-                        />
-                        <TouchableOpacity style={styles.sendButton}>
-                        <Text style={styles.sendButtonText}>Gửi</Text>
-                        </TouchableOpacity>
-                    </View>
-                    {/* </SafeAreaView>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView> */}
-            </>
-          )}
-        </View>
-      ) : activeTab === 'saved' ? (
-        <View style={styles.content}>
-          <ScrollView
-            style={styles.content}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentContainer}
-          >
-            {posts.map(post => (
-              <PostItem 
-                key={post.id} 
-                post={post} 
-                onPress={() => router.push({
-                  pathname: '/main/community/post-details',
-                  params: { id: post.id }
-                })}
-              />
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
+      {/* Content */}
+      {activeTab==='feed'  && renderFeed()}
+      {activeTab==='chat'  && renderChatList()}
+      {activeTab==='saved' && renderSaved()}
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -290,7 +184,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 8,
   },
   title: {
@@ -299,30 +193,34 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   tabContainer: {
+    marginTop: 16,
     flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginRight: 16,
-    borderRadius: 20,
+    justifyContent: 'center',
+    height: 48,
+    marginHorizontal: 4,
+    borderRadius: 24,
     backgroundColor: Colors.lightGray,
   },
   activeTabButton: {
-    backgroundColor: Colors.primary + '20', // 20% opacity
+    backgroundColor: Colors.primary + '20',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.textLight,
     marginLeft: 8,
+    fontWeight: '500',
   },
   activeTabText: {
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   createPostContainer: {
     paddingHorizontal: 16,
@@ -365,7 +263,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  doctorsTitle: {
+  chatTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
@@ -373,149 +271,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  doctorsList: {
-    flex: 1,
-  },
-  doctorItem: {
+  peerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  doctorAvatar: {
+  avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
     marginRight: 12,
   },
-  doctorInfo: {
+  info: {
     flex: 1,
   },
-  doctorName: {
+  name: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.text,
   },
-  doctorSpecialty: {
+  sub: {
     fontSize: 14,
     color: Colors.textLight,
     marginTop: 2,
   },
-  statusIndicator: {
+  statusDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
   },
-  statusOnline: {
-    backgroundColor: Colors.success,
-  },
-  statusOffline: {
-    backgroundColor: Colors.textLight,
-  },
-  chatHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontSize: 14,
+  tabTextActive: {
     color: Colors.primary,
-    fontWeight: '500',
-  },
-  doctorProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  chatDoctorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  chatDoctorName: {
-    fontSize: 16,
     fontWeight: '600',
-    color: Colors.text,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  chatContent: {
-    flex: 1,
-  },
-  chatContentContainer: {
-    padding: 16,
-  },
-  messageContainer: {
-    marginBottom: 16,
-  },
-  receivedMessage: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    borderTopLeftRadius: 4,
-    padding: 12,
-    maxWidth: '80%',
-    alignSelf: 'flex-start',
-  },
-  sentMessage: {
+  tabActive: {
     backgroundColor: Colors.primary + '20',
-    borderRadius: 16,
-    borderTopRightRadius: 4,
-    padding: 12,
-    maxWidth: '80%',
-    alignSelf: 'flex-end',
   },
-  messageText: {
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  messageTime: {
-    fontSize: 10,
-    color: Colors.textLight,
-    alignSelf: 'flex-end',
-    marginTop: 4,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.lightGray,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    maxHeight: 100,
-    fontSize: 14,
-  },
-  sendButton: {
-    marginLeft: 12,
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  sendButtonText: {
-    color: Colors.card,
-    fontWeight: '500',
-  },
+  
 });
