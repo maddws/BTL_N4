@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -29,12 +30,12 @@ export default function DiseasesScreen() {
   const { getActivePet } = usePetStore();
   const activePet = getActivePet();
 
-  // State cho category, search text và kết quả query
   const [selectedCategory, setSelectedCategory] = useState<
     'Tất cả' | 'Tiêu hóa' | 'Da liễu' | 'Hô hấp' | 'Ký sinh trùng'
   >('Tất cả');
   const [searchText, setSearchText] = useState<string>('');
   const [diseasesList, setDiseasesList] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const categories = [
     'Tất cả',
@@ -44,48 +45,56 @@ export default function DiseasesScreen() {
     'Ký sinh trùng',
   ] as const;
 
-  // Mỗi khi activePet, selectedCategory hoặc searchText thay đổi thì query Firestore
-  useEffect(() => {
-    if (!activePet) {
-      setDiseasesList([]);
-      return;
-    }
+  const fetchDiseases = useCallback(async () => {
+    if (!activePet) return;
+    setLoading(true);
 
-    const colRef = collection(db, 'DiseasesLibrary');
-    const constraints: any[] = [
-      where('petType', 'array-contains', activePet.species),
-    ];
+    try {
+      const colRef = collection(db, 'DiseasesLibrary');
+      const baseConstraints: any[] = [
+        where('petType', 'array-contains', activePet.species),
+      ];
+      if (selectedCategory !== 'Tất cả') {
+        baseConstraints.push(where('category', '==', selectedCategory));
+      }
 
-    if (selectedCategory !== 'Tất cả') {
-      constraints.push(where('category', '==', selectedCategory));
-    }
+      // 1) Lấy gốc từ Firestore (petType + category)
+      const baseQ = query(colRef, ...baseConstraints);
+      const snap = await getDocs(baseQ);
+      const all = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        // giả sử bạn đã lưu disease_name_lower
+        disease_name_lower: (d.data() as any).disease_name_lower,
+      }));
 
-    // nếu có từ khóa thì thêm prefix-search trên field disease_name_lower
-    if (searchText.trim()) {
-      constraints.push(orderBy('disease_name_lower'));
-      constraints.push(startAt(searchText.toLowerCase()));
-      constraints.push(endAt(searchText.toLowerCase() + '\uf8ff'));
-    }
+      let filtered = all;
 
-    const q = query(colRef, ...constraints);
-
-    getDocs(q)
-      .then((snap) => {
-        setDiseasesList(
-          snap.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
+      // 2) Nếu có searchText thì filter local
+      if (searchText.trim()) {
+        const txt = searchText.toLowerCase();
+        filtered = all.filter(item =>
+          item.disease_name_lower.includes(txt)
         );
-      })
-      .catch((err) => console.error('Fetch diseases error:', err));
+      }
+
+      setDiseasesList(filtered);
+    } catch (err) {
+      console.error('Fetch diseases error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [activePet, selectedCategory, searchText]);
 
+  useEffect(() => {
+    fetchDiseases();
+  }, [activePet, selectedCategory, fetchDiseases]);
+  const handleSearchPress = () => {
+    fetchDiseases();
+  };
+
   const handleDiseasePress = (id: string) => {
-    router.push({
-      pathname: './disease-details',
-      params: { id },
-    });
+    router.push({ pathname: './disease-details', params: { id } });
   };
 
   return (
@@ -103,44 +112,30 @@ export default function DiseasesScreen() {
 
         {activePet ? (
           <View style={styles.content}>
-            {/* Search bar */}
+            {/* Search bar có nút */}
             <View style={styles.searchContainer}>
-              <Search
-                size={20}
-                color={Colors.textLight}
-                style={styles.searchIcon}
-              />
+              <TouchableOpacity onPress={handleSearchPress}>
+                <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
+              </TouchableOpacity>
               <TextInput
                 style={styles.searchInput}
                 placeholder="Tìm kiếm bệnh lý..."
                 placeholderTextColor={Colors.textLight}
                 value={searchText}
                 onChangeText={setSearchText}
+                returnKeyType="search"
+                onSubmitEditing={handleSearchPress}
               />
             </View>
 
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.headerTitle}>Thư viện bệnh lý</Text>
-              <Text style={styles.headerSubtitle}>
-                Thông tin về các bệnh phổ biến ở{' '}
-                {activePet.species === 'dog'
-                  ? 'chó'
-                  : activePet.species === 'cat'
-                  ? 'mèo'
-                  : 'thú cưng'}
-              </Text>
-            </View>
+            {/* Loading spinner */}
+            {loading && <ActivityIndicator color={Colors.primary} style={{ marginVertical: 8 }} />}
 
             {/* Categories */}
             <View style={styles.categoriesContainer}>
               <Text style={styles.sectionTitle}>Danh mục</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoriesScroll}
-              >
-                {categories.map((cat) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
+                {categories.map(cat => (
                   <TouchableOpacity
                     key={cat}
                     style={[
@@ -165,7 +160,7 @@ export default function DiseasesScreen() {
             {/* Danh sách bệnh */}
             <View style={styles.diseasesContainer}>
               <Text style={styles.sectionTitle}>Bệnh phổ biến</Text>
-              {diseasesList.map((d) => (
+              {diseasesList.map(d => (
                 <TouchableOpacity
                   key={d.id}
                   style={styles.diseaseItem}
@@ -175,14 +170,9 @@ export default function DiseasesScreen() {
                     <AlertCircle size={20} color={Colors.error} />
                   </View>
                   <View style={styles.diseaseContent}>
-                    <Text style={styles.diseaseName}>
-                      {d.disease_name || d.name}
-                    </Text>
-                    <Text
-                      style={styles.diseaseDescription}
-                      numberOfLines={2}
-                    >
-                      {d.symptoms || d.description}
+                    <Text style={styles.diseaseName}>{d.disease_name}</Text>
+                    <Text style={styles.diseaseDescription} numberOfLines={2}>
+                      {Array.isArray(d.symptoms) ? d.symptoms.join(', ') : d.description}
                     </Text>
                   </View>
                   <ChevronRight size={20} color={Colors.textLight} />
