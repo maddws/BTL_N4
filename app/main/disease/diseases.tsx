@@ -1,93 +1,188 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, ChevronRight, Search } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
 import { usePetStore } from '@/store/pet-store';
-import { getDiseasesByPetType } from '@/mocks/diseases';
+import { db } from '@/config/firebase';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  startAt,
+  endAt,
+  getDocs,
+} from 'firebase/firestore';
 
 export default function DiseasesScreen() {
   const router = useRouter();
   const { getActivePet } = usePetStore();
   const activePet = getActivePet();
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
 
-  const diseases = activePet 
-    ? getDiseasesByPetType(activePet.type)
-    : [];
+  // State cho category, search text và kết quả query
+  const [selectedCategory, setSelectedCategory] = useState<
+    'Tất cả' | 'Tiêu hóa' | 'Da liễu' | 'Hô hấp' | 'Ký sinh trùng'
+  >('Tất cả');
+  const [searchText, setSearchText] = useState<string>('');
+  const [diseasesList, setDiseasesList] = useState<any[]>([]);
 
-  const filteredDiseases = selectedCategory === 'Tất cả'
-    ? diseases
-    : diseases.filter(d => d.category === selectedCategory);
+  const categories = [
+    'Tất cả',
+    'Tiêu hóa',
+    'Da liễu',
+    'Hô hấp',
+    'Ký sinh trùng',
+  ] as const;
+
+  // Mỗi khi activePet, selectedCategory hoặc searchText thay đổi thì query Firestore
+  useEffect(() => {
+    if (!activePet) {
+      setDiseasesList([]);
+      return;
+    }
+
+    const colRef = collection(db, 'DiseasesLibrary');
+    const constraints: any[] = [
+      where('petType', 'array-contains', activePet.species),
+    ];
+
+    if (selectedCategory !== 'Tất cả') {
+      constraints.push(where('category', '==', selectedCategory));
+    }
+
+    // nếu có từ khóa thì thêm prefix-search trên field disease_name_lower
+    if (searchText.trim()) {
+      constraints.push(orderBy('disease_name_lower'));
+      constraints.push(startAt(searchText.toLowerCase()));
+      constraints.push(endAt(searchText.toLowerCase() + '\uf8ff'));
+    }
+
+    const q = query(colRef, ...constraints);
+
+    getDocs(q)
+      .then((snap) => {
+        setDiseasesList(
+          snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+        );
+      })
+      .catch((err) => console.error('Fetch diseases error:', err));
+  }, [activePet, selectedCategory, searchText]);
 
   const handleDiseasePress = (id: string) => {
     router.push({
       pathname: './disease-details',
-      params: { id }
+      params: { id },
     });
   };
 
-  const categories = ['Tất cả', 'Tiêu hóa', 'Da liễu', 'Hô hấp', 'Ký sinh trùng'];
-
   return (
     <SafeAreaView style={styles.container} edges={['right', 'left']}>
-      <Stack.Screen options={{ 
-        title: 'Thư viện bệnh',
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: Colors.background },
-      }} />
+      <Stack.Screen
+        options={{
+          title: 'Thư viện bệnh',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: Colors.background },
+        }}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <PetSelector />
 
         {activePet ? (
           <View style={styles.content}>
+            {/* Search bar */}
             <View style={styles.searchContainer}>
-              <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
-              <Text style={styles.searchPlaceholder}>Tìm kiếm bệnh lý...</Text>
+              <Search
+                size={20}
+                color={Colors.textLight}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm kiếm bệnh lý..."
+                placeholderTextColor={Colors.textLight}
+                value={searchText}
+                onChangeText={setSearchText}
+              />
             </View>
 
+            {/* Header */}
             <View style={styles.headerContainer}>
               <Text style={styles.headerTitle}>Thư viện bệnh lý</Text>
               <Text style={styles.headerSubtitle}>
-                Thông tin về các bệnh phổ biến ở {activePet.type === 'dog' ? 'chó' : activePet.type === 'cat' ? 'mèo' : 'thú cưng'}
+                Thông tin về các bệnh phổ biến ở{' '}
+                {activePet.species === 'dog'
+                  ? 'chó'
+                  : activePet.species === 'cat'
+                  ? 'mèo'
+                  : 'thú cưng'}
               </Text>
             </View>
 
+            {/* Categories */}
             <View style={styles.categoriesContainer}>
               <Text style={styles.sectionTitle}>Danh mục</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-                {categories.map(category => (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoriesScroll}
+              >
+                {categories.map((cat) => (
                   <TouchableOpacity
-                    key={category}
-                    style={[styles.categoryItem, selectedCategory === category && styles.activeCategoryItem]}
-                    onPress={() => setSelectedCategory(category)}
+                    key={cat}
+                    style={[
+                      styles.categoryItem,
+                      selectedCategory === cat && styles.activeCategoryItem,
+                    ]}
+                    onPress={() => setSelectedCategory(cat)}
                   >
-                    <Text style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}>
-                      {category}
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        selectedCategory === cat && styles.activeCategoryText,
+                      ]}
+                    >
+                      {cat}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
 
+            {/* Danh sách bệnh */}
             <View style={styles.diseasesContainer}>
               <Text style={styles.sectionTitle}>Bệnh phổ biến</Text>
-              {filteredDiseases.map(disease => (
-                <TouchableOpacity 
-                  key={disease.id}
+              {diseasesList.map((d) => (
+                <TouchableOpacity
+                  key={d.id}
                   style={styles.diseaseItem}
-                  onPress={() => handleDiseasePress(disease.id)}
+                  onPress={() => handleDiseasePress(d.id)}
                 >
                   <View style={styles.diseaseIconContainer}>
                     <AlertCircle size={20} color={Colors.error} />
                   </View>
                   <View style={styles.diseaseContent}>
-                    <Text style={styles.diseaseName}>{disease.name}</Text>
-                    <Text style={styles.diseaseDescription} numberOfLines={2}>
-                      {disease.description}
+                    <Text style={styles.diseaseName}>
+                      {d.disease_name || d.name}
+                    </Text>
+                    <Text
+                      style={styles.diseaseDescription}
+                      numberOfLines={2}
+                    >
+                      {d.symptoms || d.description}
                     </Text>
                   </View>
                   <ChevronRight size={20} color={Colors.textLight} />
@@ -95,14 +190,20 @@ export default function DiseasesScreen() {
               ))}
             </View>
 
+            {/* Phần khẩn cấp */}
             <View style={styles.emergencyContainer}>
               <Text style={styles.emergencyTitle}>Tình trạng khẩn cấp</Text>
               <Text style={styles.emergencyDescription}>
                 Các dấu hiệu cần đưa thú cưng đến bác sĩ thú y ngay lập tức
               </Text>
               <View style={styles.emergencyItems}>
-                {['Khó thở', 'Co giật', 'Chấn thương', 'Nôn mửa kéo dài'].map((symptom, index) => (
-                  <View key={index} style={styles.emergencyItem}>
+                {[
+                  'Khó thở',
+                  'Co giật',
+                  'Chấn thương',
+                  'Nôn mửa kéo dài',
+                ].map((symptom, idx) => (
+                  <View key={idx} style={styles.emergencyItem}>
                     <View style={styles.emergencyIconContainer}>
                       <AlertCircle size={20} color="#fff" />
                     </View>
@@ -112,10 +213,13 @@ export default function DiseasesScreen() {
               </View>
             </View>
 
+            {/* Phần lưu ý */}
             <View style={styles.infoContainer}>
               <Text style={styles.infoTitle}>Lưu ý quan trọng</Text>
               <Text style={styles.infoText}>
-                Thông tin trong ứng dụng chỉ mang tính chất tham khảo và không thay thế cho tư vấn của bác sĩ thú y. Nếu thú cưng của bạn có dấu hiệu bệnh, hãy đưa đến phòng khám thú y ngay lập tức.
+                Thông tin trong ứng dụng chỉ mang tính chất tham khảo và không
+                thay thế cho tư vấn của bác sĩ thú y. Nếu thú cưng của bạn có
+                dấu hiệu bệnh, hãy đưa đến phòng khám thú y ngay lập tức.
               </Text>
             </View>
           </View>
@@ -155,9 +259,11 @@ const styles = StyleSheet.create({
   searchIcon: {
     marginRight: 8,
   },
-  searchPlaceholder: {
-    color: Colors.textLight,
+  searchInput: {
+    flex: 1,
     fontSize: 14,
+    color: Colors.text,
+    padding: 0,
   },
   headerContainer: {
     backgroundColor: Colors.card,

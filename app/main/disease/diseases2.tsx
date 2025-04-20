@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -7,15 +7,22 @@ import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
 import { usePetStore } from '@/store/pet-store';
 import { getDiseasesByPetType } from '@/mocks/diseases';
+import { db } from '@/config/firebase';
+import { addDoc, collection } from '@react-native-firebase/firestore';
 
 export default function DiseasesScreen() {
   const router = useRouter();
   const { getActivePet } = usePetStore();
   const activePet = getActivePet();
-  
+  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+
   const diseases = activePet 
     ? getDiseasesByPetType(activePet.species)
     : [];
+
+  const filteredDiseases = selectedCategory === 'Tất cả'
+    ? diseases
+    : diseases.filter(d => d.category === selectedCategory);
 
   const handleDiseasePress = (id: string) => {
     router.push({
@@ -24,10 +31,12 @@ export default function DiseasesScreen() {
     });
   };
 
+  const categories = ['Tất cả', 'Tiêu hóa', 'Da liễu', 'Hô hấp', 'Ký sinh trùng'];
+
   return (
     <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <Stack.Screen options={{ 
-        title: 'Bệnh lý',
+        title: 'Thư viện bệnh',
         headerShadowVisible: false,
         headerStyle: { backgroundColor: Colors.background },
       }} />
@@ -45,34 +54,30 @@ export default function DiseasesScreen() {
             <View style={styles.headerContainer}>
               <Text style={styles.headerTitle}>Thư viện bệnh lý</Text>
               <Text style={styles.headerSubtitle}>
-                Thông tin về các bệnh phổ biến ở {activePet.species === 'dog' ? 'chó' : activePet.species === 'cat' ? 'mèo' : 'thú cưng'}
+                Thông tin về các bệnh phổ biến ở {activePet.type === 'dog' ? 'chó' : activePet.type === 'cat' ? 'mèo' : 'thú cưng'}
               </Text>
             </View>
 
             <View style={styles.categoriesContainer}>
               <Text style={styles.sectionTitle}>Danh mục</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-                <TouchableOpacity style={[styles.categoryItem, styles.activeCategoryItem]}>
-                  <Text style={[styles.categoryText, styles.activeCategoryText]}>Tất cả</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryItem}>
-                  <Text style={styles.categoryText}>Tiêu hóa</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryItem}>
-                  <Text style={styles.categoryText}>Da liễu</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryItem}>
-                  <Text style={styles.categoryText}>Hô hấp</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryItem}>
-                  <Text style={styles.categoryText}>Ký sinh trùng</Text>
-                </TouchableOpacity>
+                {categories.map(category => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[styles.categoryItem, selectedCategory === category && styles.activeCategoryItem]}
+                    onPress={() => setSelectedCategory(category)}
+                  >
+                    <Text style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
 
             <View style={styles.diseasesContainer}>
               <Text style={styles.sectionTitle}>Bệnh phổ biến</Text>
-              {diseases.map(disease => (
+              {filteredDiseases.map(disease => (
                 <TouchableOpacity 
                   key={disease.id}
                   style={styles.diseaseItem}
@@ -97,32 +102,15 @@ export default function DiseasesScreen() {
               <Text style={styles.emergencyDescription}>
                 Các dấu hiệu cần đưa thú cưng đến bác sĩ thú y ngay lập tức
               </Text>
-              
               <View style={styles.emergencyItems}>
-                <View style={styles.emergencyItem}>
-                  <View style={styles.emergencyIconContainer}>
-                    <AlertCircle size={20} color="#fff" />
+                {['Khó thở', 'Co giật', 'Chấn thương', 'Nôn mửa kéo dài'].map((symptom, index) => (
+                  <View key={index} style={styles.emergencyItem}>
+                    <View style={styles.emergencyIconContainer}>
+                      <AlertCircle size={20} color="#fff" />
+                    </View>
+                    <Text style={styles.emergencyText}>{symptom}</Text>
                   </View>
-                  <Text style={styles.emergencyText}>Khó thở</Text>
-                </View>
-                <View style={styles.emergencyItem}>
-                  <View style={styles.emergencyIconContainer}>
-                    <AlertCircle size={20} color="#fff" />
-                  </View>
-                  <Text style={styles.emergencyText}>Co giật</Text>
-                </View>
-                <View style={styles.emergencyItem}>
-                  <View style={styles.emergencyIconContainer}>
-                    <AlertCircle size={20} color="#fff" />
-                  </View>
-                  <Text style={styles.emergencyText}>Chấn thương</Text>
-                </View>
-                <View style={styles.emergencyItem}>
-                  <View style={styles.emergencyIconContainer}>
-                    <AlertCircle size={20} color="#fff" />
-                  </View>
-                  <Text style={styles.emergencyText}>Nôn mửa kéo dài</Text>
-                </View>
+                ))}
               </View>
             </View>
 
