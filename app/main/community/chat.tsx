@@ -99,8 +99,8 @@ export default function ChatScreen() {
             <View>
               <Text style={styles.chatDoctorName}>{peerData.username}</Text>
               <View style={styles.statusRow}>
-                <View style={[styles.statusDot, styles.statusOnline]} />
-                <Text style={styles.statusText}>Đang trực tuyến</Text>
+                <View style={[styles.statusDot, styles.statusOffline]} />
+                <Text style={styles.statusText}>Ngoại tuyến</Text>
               </View>
             </View>
           </View>
