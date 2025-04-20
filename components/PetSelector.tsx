@@ -1,16 +1,191 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, TextInput, FlatList } from 'react-native';
+// import React, { useState } from 'react';
+// import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, TextInput, FlatList } from 'react-native';
+// import { useRouter } from 'expo-router';
+// import { usePetStore } from '@/store/pet-store';
+// import Colors from '@/constants/colors';
+// import { Plus, ChevronDown, Search, X } from 'lucide-react-native';
+// import colors from '@/constants/colors';
+
+// export default function PetSelector() {
+//   const router = useRouter();
+//   const { pets, activePetId, setActivePet } = usePetStore();
+//   const [dropdownVisible, setDropdownVisible] = useState(false);
+//   const [searchQuery, setSearchQuery] = useState('');
+
+//   const handleAddPet = () => {
+//     router.push('/main/pet/add-pet');
+//     setDropdownVisible(false);
+//   };
+
+//   const handleSelectPet = (petId: string) => {
+//     setActivePet(petId);
+//     setDropdownVisible(false);
+//   };
+
+//   const filteredPets = searchQuery 
+//     ? pets.filter(pet => pet.name.toLowerCase().includes(searchQuery.toLowerCase()))
+//     : pets;
+
+//   const activePet = pets.find(pet => pet.id === activePetId);
+
+//   if (pets.length === 0) {
+//     return (
+//       <TouchableOpacity 
+//         style={styles.emptyContainer}
+//         onPress={handleAddPet}
+//       >
+//         <Plus size={24} color={Colors.primary} />
+//         <Text style={styles.emptyText}>Thêm thú cưng</Text>
+//       </TouchableOpacity>
+//     );
+//   }
+
+//   return (
+//     <View style={styles.container}>
+//       <TouchableOpacity 
+//         style={styles.dropdownButton}
+//         onPress={() => setDropdownVisible(true)}
+//       >
+//         {activePet ? (
+//           <View style={styles.selectedPet}>
+//             <Image 
+//               source={{ uri: activePet.imageUrl }} 
+//               style={styles.selectedPetImage} 
+//             />
+//             <View style={styles.selectedPetInfo}>
+//               <Text style={styles.selectedPetName}>{activePet.name}</Text>
+//               <Text style={styles.selectedPetBreed}>{activePet.breed}</Text>
+//             </View>
+//             <ChevronDown size={20} color={Colors.textLight} />
+//           </View>
+//         ) : (
+//           <View style={styles.selectedPet}>
+//             <Text style={styles.placeholderText}>Chọn thú cưng</Text>
+//             <ChevronDown size={20} color={Colors.textLight} />
+//           </View>
+//         )}
+//       </TouchableOpacity>
+
+//       <Modal
+//         visible={dropdownVisible}
+//         transparent
+//         animationType="fade"
+//         onRequestClose={() => setDropdownVisible(false)}
+//       >
+//         <TouchableOpacity 
+//           style={styles.modalOverlay}
+//           activeOpacity={1}
+//           onPress={() => setDropdownVisible(false)}
+//         >
+//           <View style={styles.modalContent}>
+//             <View style={styles.modalHeader}>
+//               <Text style={styles.modalTitle}>Chọn thú cưng</Text>
+//               <TouchableOpacity onPress={() => setDropdownVisible(false)}>
+//                 <X size={24} color={Colors.text} />
+//               </TouchableOpacity>
+//             </View>
+
+//             <View style={styles.searchContainer}>
+//               <Search size={20} color={Colors.textLight} style={styles.searchIcon} />
+//               <TextInput
+//                 style={styles.searchInput}
+//                 placeholder="Tìm kiếm thú cưng..."
+//                 placeholderTextColor={Colors.textLight}
+//                 value={searchQuery}
+//                 onChangeText={setSearchQuery}
+//               />
+//               {searchQuery.length > 0 && (
+//                 <TouchableOpacity onPress={() => setSearchQuery('')}>
+//                   <X size={18} color={Colors.textLight} />
+//                 </TouchableOpacity>
+//               )}
+//             </View>
+
+//             <FlatList
+//               data={filteredPets}
+//               keyExtractor={(item) => item.id}
+//               renderItem={({ item }) => (
+//                 <TouchableOpacity 
+//                   style={[
+//                     styles.petItem,
+//                     item.id === activePetId && styles.activePetItem
+//                   ]}
+//                   onPress={() => handleSelectPet(item.id)}
+//                 >
+//                   <Image source={{ uri: item.imageUrl }} style={styles.petImage} />
+//                   <View style={styles.petInfo}>
+//                     <Text style={styles.petName}>{item.name}</Text>
+//                     <Text style={styles.petBreed}>{item.breed}</Text>
+//                   </View>
+//                 </TouchableOpacity>
+//               )}
+//               ListEmptyComponent={
+//                 <View style={styles.emptyList}>
+//                   <Text style={styles.emptyListText}>
+//                     {searchQuery.length > 0 
+//                       ? 'Không tìm thấy thú cưng nào' 
+//                       : 'Chưa có thú cưng nào'}
+//                   </Text>
+//                 </View>
+//               }
+//             />
+
+//             <TouchableOpacity 
+//               style={styles.addButton}
+//               onPress={handleAddPet}
+//             >
+//               <Plus size={20} color={Colors.card} />
+//               <Text style={styles.addButtonText}>Thêm thú cưng mới</Text>
+//             </TouchableOpacity>
+//           </View>
+//         </TouchableOpacity>
+//       </Modal>
+//     </View>
+//   );
+// }
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Modal,
+  TextInput,
+  FlatList
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { usePetStore } from '@/store/pet-store';
 import Colors from '@/constants/colors';
 import { Plus, ChevronDown, Search, X } from 'lucide-react-native';
-import colors from '@/constants/colors';
 
 export default function PetSelector() {
   const router = useRouter();
-  const { pets, activePetId, setActivePet } = usePetStore();
+
+  // Zustand actions & state
+  const { pets, activePetId, setActivePet, fetchUserPets } = usePetStore();
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery]           = useState('');
+  const [loading, setLoading]                   = useState(true);
+
+  // On mount: read user ID, fetch linked pets
+  useEffect(() => {
+    (async () => {
+      try {
+        const json = await AsyncStorage.getItem('user');
+        if (!json) return;
+        const { id: userId } = JSON.parse(json);
+        await fetchUserPets(userId);
+      } catch (err) {
+        console.error('Failed to load user pets', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const handleAddPet = () => {
     router.push('/main/pet/add-pet');
@@ -22,18 +197,25 @@ export default function PetSelector() {
     setDropdownVisible(false);
   };
 
-  const filteredPets = searchQuery 
-    ? pets.filter(pet => pet.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredPets = searchQuery
+    ? pets.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : pets;
 
-  const activePet = pets.find(pet => pet.id === activePetId);
+  const activePet = pets.find(p => p.id === activePetId);
 
+//   // while loading your pets...
+//   if (loading) {
+//     return (
+//       <View style={styles.loadingContainer}>
+//         <Text>Đang tải thú cưng…</Text>
+//       </View>
+//     );
+//   }
+
+  // no pets yet?
   if (pets.length === 0) {
     return (
-      <TouchableOpacity 
-        style={styles.emptyContainer}
-        onPress={handleAddPet}
-      >
+      <TouchableOpacity style={styles.emptyContainer} onPress={handleAddPet}>
         <Plus size={24} color={Colors.primary} />
         <Text style={styles.emptyText}>Thêm thú cưng</Text>
       </TouchableOpacity>
@@ -42,16 +224,10 @@ export default function PetSelector() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.dropdownButton}
-        onPress={() => setDropdownVisible(true)}
-      >
+      <TouchableOpacity style={styles.dropdownButton} onPress={() => setDropdownVisible(true)}>
         {activePet ? (
           <View style={styles.selectedPet}>
-            <Image 
-              source={{ uri: activePet.imageUrl }} 
-              style={styles.selectedPetImage} 
-            />
+            <Image source={{ uri: activePet.photo }} style={styles.selectedPetImage} />
             <View style={styles.selectedPetInfo}>
               <Text style={styles.selectedPetName}>{activePet.name}</Text>
               <Text style={styles.selectedPetBreed}>{activePet.breed}</Text>
@@ -72,7 +248,7 @@ export default function PetSelector() {
         animationType="fade"
         onRequestClose={() => setDropdownVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setDropdownVisible(false)}
@@ -103,16 +279,16 @@ export default function PetSelector() {
 
             <FlatList
               data={filteredPets}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     styles.petItem,
                     item.id === activePetId && styles.activePetItem
                   ]}
                   onPress={() => handleSelectPet(item.id)}
                 >
-                  <Image source={{ uri: item.imageUrl }} style={styles.petImage} />
+                  <Image source={{ uri: item.photo }} style={styles.petImage} />
                   <View style={styles.petInfo}>
                     <Text style={styles.petName}>{item.name}</Text>
                     <Text style={styles.petBreed}>{item.breed}</Text>
@@ -122,18 +298,15 @@ export default function PetSelector() {
               ListEmptyComponent={
                 <View style={styles.emptyList}>
                   <Text style={styles.emptyListText}>
-                    {searchQuery.length > 0 
-                      ? 'Không tìm thấy thú cưng nào' 
+                    {searchQuery
+                      ? 'Không tìm thấy thú cưng'
                       : 'Chưa có thú cưng nào'}
                   </Text>
                 </View>
               }
             />
 
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={handleAddPet}
-            >
+            <TouchableOpacity style={styles.addButton} onPress={handleAddPet}>
               <Plus size={20} color={Colors.card} />
               <Text style={styles.addButtonText}>Thêm thú cưng mới</Text>
             </TouchableOpacity>
@@ -150,7 +323,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dropdownButton: {
-    backgroundColor: colors.warning,
+    backgroundColor: Colors.warning,
     borderRadius: 12,
     padding: 12,
     shadowColor: '#000',
