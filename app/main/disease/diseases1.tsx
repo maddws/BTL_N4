@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -12,15 +12,10 @@ export default function DiseasesScreen() {
   const router = useRouter();
   const { getActivePet } = usePetStore();
   const activePet = getActivePet();
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-
+  
   const diseases = activePet 
     ? getDiseasesByPetType(activePet.type)
     : [];
-
-  const filteredDiseases = selectedCategory === 'Tất cả'
-    ? diseases
-    : diseases.filter(d => d.category === selectedCategory);
 
   const handleDiseasePress = (id: string) => {
     router.push({
@@ -29,12 +24,10 @@ export default function DiseasesScreen() {
     });
   };
 
-  const categories = ['Tất cả', 'Tiêu hóa', 'Da liễu', 'Hô hấp', 'Ký sinh trùng'];
-
   return (
     <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <Stack.Screen options={{ 
-        title: 'Thư viện bệnh',
+        title: 'Bệnh lý',
         headerShadowVisible: false,
         headerStyle: { backgroundColor: Colors.background },
       }} />
@@ -59,23 +52,27 @@ export default function DiseasesScreen() {
             <View style={styles.categoriesContainer}>
               <Text style={styles.sectionTitle}>Danh mục</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-                {categories.map(category => (
-                  <TouchableOpacity
-                    key={category}
-                    style={[styles.categoryItem, selectedCategory === category && styles.activeCategoryItem]}
-                    onPress={() => setSelectedCategory(category)}
-                  >
-                    <Text style={[styles.categoryText, selectedCategory === category && styles.activeCategoryText]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity style={[styles.categoryItem, styles.activeCategoryItem]}>
+                  <Text style={[styles.categoryText, styles.activeCategoryText]}>Tất cả</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>Tiêu hóa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>Da liễu</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>Hô hấp</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>Ký sinh trùng</Text>
+                </TouchableOpacity>
               </ScrollView>
             </View>
 
             <View style={styles.diseasesContainer}>
               <Text style={styles.sectionTitle}>Bệnh phổ biến</Text>
-              {filteredDiseases.map(disease => (
+              {diseases.map(disease => (
                 <TouchableOpacity 
                   key={disease.id}
                   style={styles.diseaseItem}
@@ -100,15 +97,32 @@ export default function DiseasesScreen() {
               <Text style={styles.emergencyDescription}>
                 Các dấu hiệu cần đưa thú cưng đến bác sĩ thú y ngay lập tức
               </Text>
+              
               <View style={styles.emergencyItems}>
-                {['Khó thở', 'Co giật', 'Chấn thương', 'Nôn mửa kéo dài'].map((symptom, index) => (
-                  <View key={index} style={styles.emergencyItem}>
-                    <View style={styles.emergencyIconContainer}>
-                      <AlertCircle size={20} color="#fff" />
-                    </View>
-                    <Text style={styles.emergencyText}>{symptom}</Text>
+                <View style={styles.emergencyItem}>
+                  <View style={styles.emergencyIconContainer}>
+                    <AlertCircle size={20} color="#fff" />
                   </View>
-                ))}
+                  <Text style={styles.emergencyText}>Khó thở</Text>
+                </View>
+                <View style={styles.emergencyItem}>
+                  <View style={styles.emergencyIconContainer}>
+                    <AlertCircle size={20} color="#fff" />
+                  </View>
+                  <Text style={styles.emergencyText}>Co giật</Text>
+                </View>
+                <View style={styles.emergencyItem}>
+                  <View style={styles.emergencyIconContainer}>
+                    <AlertCircle size={20} color="#fff" />
+                  </View>
+                  <Text style={styles.emergencyText}>Chấn thương</Text>
+                </View>
+                <View style={styles.emergencyItem}>
+                  <View style={styles.emergencyIconContainer}>
+                    <AlertCircle size={20} color="#fff" />
+                  </View>
+                  <Text style={styles.emergencyText}>Nôn mửa kéo dài</Text>
+                </View>
               </View>
             </View>
 

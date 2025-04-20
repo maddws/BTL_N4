@@ -6,6 +6,8 @@ import { Camera, Calendar, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { usePetStore } from '@/store/pet-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DatePicker from '@/components/DatePicker';
 
 type PetType = 'dog' | 'cat' | 'bird' | 'fish' | 'other';
 
@@ -25,6 +27,7 @@ const petTypes: PetTypeOption[] = [
 export default function AddPetScreen() {
   const router = useRouter();
   const { addPet } = usePetStore();
+  const { createPetForUser } = usePetStore();
   
   const [name, setName] = useState('');
   const [type, setType] = useState<PetType>('dog');
@@ -33,7 +36,7 @@ export default function AddPetScreen() {
   const [weight, setWeight] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [imageUrl, setImageUrl] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDate, setBirthDate] = useState<Date>(new Date());
   const [color, setColor] = useState('');
   const [microchipId, setMicrochipId] = useState('');
   
@@ -69,22 +72,43 @@ export default function AddPetScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  async function handleSubmit() {
     if (!validateForm()) return;
     
-    addPet({
-      name,
-      type,
-      breed,
-      age: Number(age),
-      weight: Number(weight),
-      gender,
-      imageUrl: imageUrl || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
-      birthDate: birthDate || new Date().toISOString().split('T')[0],
-      color,
-      microchipId: microchipId || undefined,
-      isActive: true
-    });
+    // addPet({
+    //   name,
+    //   type,
+    //   breed,
+    //   age: Number(age),
+    //   weight: Number(weight),
+    //   gender,
+    //   imageUrl: imageUrl || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
+    //   birthDate: birthDate || new Date().toISOString().split('T')[0],
+    //   color,
+    //   microchipId: microchipId || undefined,
+    //   isActive: true
+    // });
+    console.log('Submitting pet data');
+    const userData = await AsyncStorage.getItem('user');
+    console.log('User ID:', userData);
+    const userId = userData ? JSON.parse(userData).id : null;
+    console.log('User ID:', userId);
+
+    if (userId) {
+        console.warn('Call to creating pet for user');
+        await createPetForUser(userId, {
+            name: name,
+            breed: breed,
+            species: type,
+            birthDate: birthDate,
+            weight: Number(weight),
+            vaccinated: false,
+            photo: imageUrl || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba', // Default photo if none provided
+            age: Number(age),
+            gender: gender,
+            isActive: true,
+        });
+    }
     
     router.back();
   };
@@ -223,16 +247,21 @@ export default function AddPetScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Ngày sinh</Text>
-            <TouchableOpacity style={styles.dateInput}>
+            {/* <TouchableOpacity style={styles.dateInput}>
               <TextInput
                 style={styles.dateInputText}
                 value={birthDate}
                 onChangeText={setBirthDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textLight}
-              />
-              <Calendar size={20} color={Colors.textLight} />
-            </TouchableOpacity>
+              /> */}
+                <DatePicker
+                label="Ngày *"
+                date={birthDate}
+                onChange={setBirthDate}
+                error={errors.date}
+                />
+            {/* </TouchableOpacity> */}
           </View>
 
           <View style={styles.formGroup}>

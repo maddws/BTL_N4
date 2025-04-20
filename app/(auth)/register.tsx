@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Eye, EyeOff, ArrowLeft, Mail, Lock, User, Phone } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useSettingsStore } from '@/store/settings-store';
+import { useAuth } from '@/context/AuthContext'
+import {
+  doc,
+  setDoc,
+  serverTimestamp
+} from 'firebase/firestore';
+import type { UserDoc } from '@/types/pet';
+
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useSettingsStore();
+  const { signIn } = useAuth();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -66,20 +77,48 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = () => {
+  async function handleRegister() {
     if (validateForm()) {
       // In a real app, you would register with a server here
-      // For demo purposes, we'll just simulate a successful registration
-      login({
-        name: name,
-        email: email,
-        phone: phone,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      });
-      
-      router.push('/(tabs)');
+        try {
+            console.warn('Registering user...');
+            const usersCol = collection(db, 'Users');
+            const userData = {
+                email: email,
+                password: password,
+                phone_number: phone,
+                username: name,
+                profile_picture: 'http://localhost/avatar.png',
+                language: 'vi',
+                create_at: serverTimestamp(),
+                updated_at: serverTimestamp(),
+            } as UserDoc;
+            console.warn('User data:', userData);
+            const docRef = await addDoc(usersCol, userData);
+            console.warn('User created with ID:', docRef.id);
+
+            // Firestore just told you the new ID:
+            console.warn('New Firestore User ID:', docRef.id);
+
+            // 3) If you still want to sign in right away:
+            await signIn(userData);
+            login({
+                id: docRef.id,
+                name: name,
+                email: email,
+                phone: phone,
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+            });
+        } catch (err: any) {
+            console.error('Register error', err);
+            // If Firebase error you can show err.message,
+            // otherwise a generic alert:
+            alert(
+                'Lỗi đăng ký',
+            );
+        }
     }
-  };
+};
 
   const handleLogin = () => {
     router.push('/login');
@@ -117,12 +156,12 @@ export default function RegisterScreen() {
 
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Họ tên</Text>
+              <Text style={styles.inputLabel}>Username</Text>
               <View style={[styles.inputContainer, errors.name && styles.inputError]}>
                 <User size={20} color={Colors.textLight} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Nhập họ tên của bạn"
+                  placeholder="Username viết liền không dấu"
                   placeholderTextColor={Colors.textLight}
                   value={name}
                   onChangeText={setName}

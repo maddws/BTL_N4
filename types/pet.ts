@@ -1,8 +1,10 @@
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+
 export interface Pet {
-  id: string;
-  name: string;
-  type: 'dog' | 'cat' | 'bird' | 'fish' | 'other';
-  breed: string;
+  id: string;       // check  
+  name: string;      // check
+  species: string;  // check
+  breed: string;   // check
   age: number;
   weight: number;
   gender: 'male' | 'female';
@@ -11,6 +13,8 @@ export interface Pet {
   color: string;
   microchipId?: string;
   isActive: boolean;
+  vaccinated: boolean;
+  photo: string;
 }
 
 export interface HealthRecord {
@@ -117,4 +121,15 @@ export interface Message {
   content: string;
   timestamp: string;
   read: boolean;
+}
+
+export interface UserDoc {
+    create_at:  FirebaseFirestoreTypes.Timestamp;
+    email: string;
+    language: string;
+    password: string;
+    phone_number: string;
+    profile_picture: string;
+    updated_at : FirebaseFirestoreTypes.Timestamp;
+    username: string;
 }

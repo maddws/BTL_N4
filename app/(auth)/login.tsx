@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
+import { 
+  collection,
+  query,
+  where,
+  limit,
+  getDocs
+} from 'firebase/firestore';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useAuth } from '@/context/AuthContext';          // Firestore ví dụ
+import { db } from '@/config/firebase';
 import { useSettingsStore } from '@/store/settings-store';
+// import { useSettingsStore, UserProfile } from '@/store/settings-store';
+// import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// import { FirebaseAuthTypes } from '@react-native-firebase/auth';
+// import { GoogleAuthProvider, signInWithCredential, getAuth } from 'firebase/auth';
+
+
+
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useSettingsStore();
-  
+  const { signIn } = useAuth();
+  const { login } = useSettingsStore(); // Lưu trạng thái đăng nhập
+  //const { isLoggedIn } = useAuth(); // Kiểm tra trạng thái đăng nhập
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,27 +52,88 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = () => {
-    if (validateForm()) {
-      // In a real app, you would authenticate with a server here
-      // For demo purposes, we'll just simulate a successful login
-      login({
-        name: 'Người dùng',
-        email: email,
-        phone: '0123456789',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      });
-      
-      router.push('/(tabs)');
-    }
-  };
+    const handleLogin = async () => {
+        if (!validateForm()) return;
+
+
+        try {
+            // const q = await db
+            // .collection('Users')
+            // .where('email', '==', email)
+            // .where('password', '==', await password)
+            // .limit(1)
+            // .get();
+            // const usersCol = collection(db, 'Users');
+            // const q = query(
+            //     usersCol,
+            //     where('email', '==', email),
+            //     where('password', '==', password),  // no `await` here
+            //     limit(1)
+            // );
+            const usersCol = collection(db, 'Users');
+            const q = query(
+            usersCol,
+            where('email',    '==', email),
+            where('password', '==', password), // pass string directly—no await
+            limit(1)
+            );
+
+            // 2) Execute the query
+            const snap = await getDocs(q);
+
+            console.warn(snap)
+
+            if (snap.empty) throw new Error('Sai tài khoản hoặc mật khẩu');
+                const doc   = snap.docs[0];
+
+            const userData = doc.data();
+            const user = {
+                //id: doc.id,
+                create_at: userData.create_at,
+                email: userData.email,
+                language: userData.language || 'vi',
+                password: userData.password,
+                phone: userData.phone || '',
+                phone_number: userData.phone_number || '',
+                role: userData.role || 'user',
+                username: userData.username || '',
+                profile_picture: userData.profile_picture || '',
+                updated_at: userData.updated_at || userData.create_at,
+                ...userData
+            };
+
+            // 3. Lưu vào AsyncStorage để khôi phục lần sau
+            await AsyncStorage.setItem('user', JSON.stringify({
+                id: doc.id,
+                name: user.username,
+                email: user.email,
+                phone: user.phone || '',
+                avatar: user.profile_picture || '',  
+            }));
+
+            signIn(user);          // 🟢 AuthGuard sẽ tự chuyển về Home
+
+            login({
+                id: doc.id,
+                name: user.username,
+                email: user.email,
+                phone: user.phone || '',
+                avatar: user.profile_picture || '',  
+            });
+        } catch (err: any) {
+            setErrors({ password: 'Email hoặc mật khẩu không đúng' });
+            console.warn('Login error', err);
+        }
+        // 4. Cập nhật context
+    };
+
 
   const handleForgotPassword = () => {
-    router.push('/forgot-password');
+    router.push('./forgot-password');
   };
 
   const handleRegister = () => {
-    router.push('/register');
+    router.push('./register');
   };
 
   return (
@@ -152,9 +231,12 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.socialLoginContainer}>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity 
+                style={styles.socialButton}
+                //</View>onPress={handleGoogleLogin}
+                >
                 <Image 
-                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/1200px-Google_%22G%22_Logo.svg.png' }} 
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png' }} 
                   style={styles.socialIcon} 
                 />
                 <Text style={styles.socialButtonText}>Google</Text>
@@ -330,5 +412,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  socialLoginButton: {
+    backgroundColor: Colors.secondary,
+    borderRadius: 12,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
 });
