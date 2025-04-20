@@ -80,7 +80,7 @@ export default function DiseasesScreen() {
 
       setDiseasesList(filtered);
     } catch (err) {
-      console.error('Fetch diseases error:', err);
+      console.error('Loi mat roiii:', err);
     } finally {
       setLoading(false);
     }

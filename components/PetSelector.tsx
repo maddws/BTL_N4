@@ -474,51 +474,99 @@
 //     marginLeft: 8,
 //   },
 // });
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, TextInput, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Modal,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { usePetStore } from '@/store/pet-store';
 import Colors from '@/constants/colors';
 import { Plus, ChevronDown, Search, X, Pencil } from 'lucide-react-native';
+import { db } from '@/config/firebase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+} from 'firebase/firestore';
 
 export default function PetSelector() {
   const router = useRouter();
-  const { pets, activePetId, setActivePet, deletePet } = usePetStore();
+  const [pets, setPets] = useState<any[]>([]);
+  const [activePetId, setActivePetId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAddPet = () => {
+  // 1) load userId & then fetch all UserPet links, then load each Pet
+  useEffect(() => {
+    (async () => {
+      try {
+        const userJson = await AsyncStorage.getItem('user');
+        if (!userJson) return;
+        const { id: userId } = JSON.parse(userJson);
+
+        // get all UserPet docs for this user
+        const upSnap = await getDocs(
+          query(collection(db, 'UserPet'), where('user_id', '==', userId))
+        );
+        const petIds = upSnap.docs.map(d => d.data().pet_id as string);
+
+        // fetch each pet
+        const loaded: any[] = [];
+        for (const pid of petIds) {
+          const pDoc = await getDoc(doc(db, 'Pets', pid));
+          if (pDoc.exists()) {
+            loaded.push({ id: pDoc.id, ...(pDoc.data() as any) });
+          }
+        }
+        setPets(loaded);
+        setActivePetId(loaded[0]?.id ?? null);
+      } catch (e) {
+        console.error('PetSelector load error', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const filtered = searchQuery
+    ? pets.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : pets;
+
+  const activePet = pets.find(p => p.id === activePetId);
+
+  const selectPet = (id: string) => {
+    setActivePetId(id);
+    setDropdownVisible(false);
+  };
+
+  const goEdit = (id: string) => {
+    router.push({ pathname: '/main/pet/edit-pet', params: { petId: id } });
+    setDropdownVisible(false);
+  };
+
+  const goAdd = () => {
     router.push('/main/pet/add-pet');
     setDropdownVisible(false);
   };
 
-  const handleDeletePet = (petId: string) => {
-    deletePet(petId);
-  };
-
-  // Hàm chuyển đến màn hình sửa thú cưng. Giả sử route '/edit-pet' nhận petId qua query.
-  const handleUpdatePet = (petId: string) => {
-    router.push('/main/pet/edit-pet');
-    setDropdownVisible(false);
-  };
-
-  const handleSelectPet = (petId: string) => {
-    setActivePet(petId);
-    setDropdownVisible(false);
-  };
-
-  const filteredPets = searchQuery
-    ? pets.filter(pet => pet.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : pets;
-
-  const activePet = pets.find(pet => pet.id === activePetId);
+  if (loading)
+    return <ActivityIndicator style={{ margin: 16 }} color={Colors.primary} />;
 
   if (pets.length === 0) {
     return (
-      <TouchableOpacity 
-        style={styles.emptyContainer}
-        onPress={handleAddPet}
-      >
+      <TouchableOpacity style={styles.emptyContainer} onPress={goAdd}>
         <Plus size={24} color={Colors.primary} />
         <Text style={styles.emptyText}>Thêm thú cưng</Text>
       </TouchableOpacity>
@@ -527,16 +575,10 @@ export default function PetSelector() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.dropdownButton}
-        onPress={() => setDropdownVisible(true)}
-      >
+      <TouchableOpacity style={styles.dropdownButton} onPress={() => setDropdownVisible(true)}>
         {activePet ? (
           <View style={styles.selectedPet}>
-            <Image 
-              source={{ uri: activePet.photo }} 
-              style={styles.selectedPetImage} 
-            />
+            <Image source={{ uri: activePet.photo }} style={styles.selectedPetImage} />
             <View style={styles.selectedPetInfo}>
               <Text style={styles.selectedPetName}>{activePet.name}</Text>
               <Text style={styles.selectedPetBreed}>{activePet.breed}</Text>
@@ -544,10 +586,7 @@ export default function PetSelector() {
             <ChevronDown size={20} color={Colors.textLight} />
           </View>
         ) : (
-          <View style={styles.selectedPet}>
-            <Text style={styles.placeholderText}>Chọn thú cưng</Text>
-            <ChevronDown size={20} color={Colors.textLight} />
-          </View>
+          <Text style={styles.placeholderText}>Chọn thú cưng</Text>
         )}
       </TouchableOpacity>
 
@@ -557,11 +596,7 @@ export default function PetSelector() {
         animationType="fade"
         onRequestClose={() => setDropdownVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setDropdownVisible(false)}
-        >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Chọn thú cưng</Text>
@@ -579,7 +614,7 @@ export default function PetSelector() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
-              {searchQuery.length > 0 && (
+              {!!searchQuery && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
                   <X size={18} color={Colors.textLight} />
                 </TouchableOpacity>
@@ -587,16 +622,13 @@ export default function PetSelector() {
             </View>
 
             <FlatList
-              data={filteredPets}
-              keyExtractor={(item) => item.id}
+              data={filtered}
+              keyExtractor={item => item.id}
               renderItem={({ item }) => (
-                <View style={styles.itemContainer}>
-                  <TouchableOpacity 
-                    style={[
-                      styles.petItem,
-                      item.id === activePetId && styles.activePetItem
-                    ]}
-                    onPress={() => handleSelectPet(item.id)}
+                <View style={styles.itemRow}>
+                  <TouchableOpacity
+                    style={[styles.petItem, item.id === activePetId && styles.activeItem]}
+                    onPress={() => selectPet(item.id)}
                   >
                     <Image source={{ uri: item.photo }} style={styles.petImage} />
                     <View style={styles.petInfo}>
@@ -604,35 +636,21 @@ export default function PetSelector() {
                       <Text style={styles.petBreed}>{item.breed}</Text>
                     </View>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.updateButton} 
-                    onPress={() => handleUpdatePet(item.id)}
-                  >
+                  <TouchableOpacity style={styles.editBtn} onPress={() => goEdit(item.id)}>
                     <Pencil size={18} color={Colors.primary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.deleteButton} 
-                    onPress={() => handleDeletePet(item.id)}
-                  >
-                    <X size={18} color="red" />
                   </TouchableOpacity>
                 </View>
               )}
-              ListEmptyComponent={
+              ListEmptyComponent={() => (
                 <View style={styles.emptyList}>
                   <Text style={styles.emptyListText}>
-                    {searchQuery.length > 0 
-                      ? 'Không tìm thấy thú cưng nào' 
-                      : 'Chưa có thú cưng nào'}
+                    {searchQuery ? 'Không tìm thấy thú cưng' : 'Chưa có thú cưng nào'}
                   </Text>
                 </View>
-              }
+              )}
             />
 
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={handleAddPet}
-            >
+            <TouchableOpacity style={styles.addButton} onPress={goAdd}>
               <Plus size={20} color={Colors.card} />
               <Text style={styles.addButtonText}>Thêm thú cưng mới</Text>
             </TouchableOpacity>
@@ -644,94 +662,21 @@ export default function PetSelector() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  petItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    flex: 1
-  },
-  activePetItem: {
-    backgroundColor: Colors.primary + '15', // 15% opacity
-  },
-  petImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  petInfo: {
-    flex: 1,
-  },
-  petName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  petBreed: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  updateButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  deleteButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
+  container: { paddingHorizontal: 16, marginBottom: 8 },
   dropdownButton: {
     backgroundColor: Colors.warning,
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  selectedPet: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  selectedPetImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  selectedPetInfo: {
-    flex: 1,
-  },
-  selectedPetName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  selectedPetBreed: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  placeholderText: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textLight,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  selectedPet: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  selectedPetImage: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  selectedPetInfo: { flex: 1 },
+  selectedPetName: { fontSize: 16, fontWeight: '600', color: Colors.text },
+  selectedPetBreed: { fontSize: 12, color: Colors.textLight },
+  placeholderText: { flex: 1, fontSize: 16, color: Colors.textLight },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: {
     backgroundColor: Colors.background,
     borderRadius: 16,
@@ -739,77 +684,23 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     padding: 16,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.lightGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    color: Colors.text,
-    fontSize: 14,
-  },
-  emptyList: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyListText: {
-    fontSize: 14,
-    color: Colors.textLight,
-    textAlign: 'center',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.card,
-    marginLeft: 8,
-  },
-  emptyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.primary,
-    marginLeft: 8,
-  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.text },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.lightGray, borderRadius: 8, paddingHorizontal: 12, marginBottom: 16 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, height: 40, color: Colors.text, fontSize: 14 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  petItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 8, flex: 1 },
+  activeItem: { backgroundColor: Colors.primary + '15' },
+  petImage: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  petInfo: { flex: 1 },
+  petName: { fontSize: 16, fontWeight: '500', color: Colors.text },
+  petBreed: { fontSize: 12, color: Colors.textLight },
+  editBtn: { marginLeft: 8, padding: 4 },
+  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, borderRadius: 8, padding: 12, marginTop: 8 },
+  addButtonText: { fontSize: 14, fontWeight: '500', color: Colors.card, marginLeft: 8 },
+  emptyContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.card, borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16 },
+  emptyText: { fontSize: 16, fontWeight: '500', color: Colors.primary, marginLeft: 8 },
+  emptyList: { padding: 24, alignItems: 'center' },
+  emptyListText: { fontSize: 14, color: Colors.textLight, textAlign: 'center' },
 });
