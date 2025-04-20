@@ -51,7 +51,7 @@ export default function VaccinationsScreen() {
                 <Text style={styles.vaccinationsTitle}>Lịch tiêm phòng</Text>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-vaccination')}
+                  onPress={() => router.push('./add-vaccination')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -62,7 +62,7 @@ export default function VaccinationsScreen() {
                   <TouchableOpacity 
                     key={vaccination.id}
                     onPress={() => router.push({
-                      pathname: '/vaccination-details',
+                      pathname: './vaccination-details',
                       params: { id: vaccination.id }
                     })}
                   >

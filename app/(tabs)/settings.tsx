@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { FlatList } from 'react-native';
 import { 
   User, 
   Bell, 
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Cài đặt</Text>
       </View>
+
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Section */}
