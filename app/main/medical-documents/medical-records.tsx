@@ -59,7 +59,7 @@ export default function MedicalRecordsScreen() {
                 </View>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-health-record')}
+                  onPress={() => router.push('./add-health-record')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -74,7 +74,7 @@ export default function MedicalRecordsScreen() {
                       key={record.id} 
                       style={styles.recordItem}
                       onPress={() => router.push({
-                        pathname: '/health-record-details',
+                        pathname: './health-record-details',
                         params: { id: record.id }
                       })}
                     >
@@ -105,7 +105,7 @@ export default function MedicalRecordsScreen() {
               {healthRecords.length > 3 && (
                 <TouchableOpacity 
                   style={styles.viewAllButton}
-                  onPress={() => router.push('/health')}
+                  onPress={() => router.push('./health')}
                 >
                   <Text style={styles.viewAllText}>Xem tất cả</Text>
                 </TouchableOpacity>
@@ -120,7 +120,7 @@ export default function MedicalRecordsScreen() {
                 </View>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-vaccination')}
+                  onPress={() => router.push('./add-vaccination')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -135,7 +135,7 @@ export default function MedicalRecordsScreen() {
                       key={vaccination.id} 
                       style={styles.recordItem}
                       onPress={() => router.push({
-                        pathname: '/vaccination-details',
+                        pathname: './vaccination-details',
                         params: { id: vaccination.id }
                       })}
                     >
@@ -163,7 +163,7 @@ export default function MedicalRecordsScreen() {
               {vaccinations.length > 3 && (
                 <TouchableOpacity 
                   style={styles.viewAllButton}
-                  onPress={() => router.push('/vaccinations')}
+                  onPress={() => router.push('/main/vaccination/add-vaccination')}
                 >
                   <Text style={styles.viewAllText}>Xem tất cả</Text>
                 </TouchableOpacity>
@@ -178,7 +178,7 @@ export default function MedicalRecordsScreen() {
                 </View>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={() => router.push('/add-medical-document')}
+                  onPress={() => router.push('./add-medical-document')}
                 >
                   <Plus size={16} color={Colors.card} />
                 </TouchableOpacity>
@@ -194,7 +194,7 @@ export default function MedicalRecordsScreen() {
                         key={document.id} 
                         style={styles.documentItem}
                         onPress={() => router.push({
-                          pathname: '/medical-document-details',
+                          pathname: './medical-document-details',
                           params: { id: document.id }
                         })}
                       >
@@ -227,7 +227,7 @@ export default function MedicalRecordsScreen() {
               {medicalDocuments.length > 3 && (
                 <TouchableOpacity 
                   style={styles.viewAllButton}
-                  onPress={() => router.push('/medical-documents')}
+                  onPress={() => router.push('./medical-documents')}
                 >
                   <Text style={styles.viewAllText}>Xem tất cả</Text>
                 </TouchableOpacity>
