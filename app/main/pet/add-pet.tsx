@@ -1,6 +1,6 @@
 // File: AddPetScreen.tsx
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,17 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
-import { Camera, X } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import Colors from '@/constants/colors';
-import { usePetStore } from '@/store/pet-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import DatePicker from '@/components/DatePicker';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack, useRouter } from "expo-router";
+import { Camera, X } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import Colors from "@/constants/colors";
+import { usePetStore } from "@/store/pet-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import DatePicker from "@/components/DatePicker";
 
-type PetType = 'dog' | 'cat' | 'bird' | 'fish' | 'other';
+type PetType = "dog" | "cat" | "bird" | "fish" | "other";
 
 interface PetTypeOption {
   value: PetType;
@@ -29,27 +29,27 @@ interface PetTypeOption {
 }
 
 const petTypes: PetTypeOption[] = [
-  { value: 'dog', label: 'Chó' },
-  { value: 'cat', label: 'Mèo' },
-  { value: 'bird', label: 'Chim' },
-  { value: 'fish', label: 'Cá' },
-  { value: 'other', label: 'Khác' },
+  { value: "dog", label: "Chó" },
+  { value: "cat", label: "Mèo" },
+  { value: "bird", label: "Chim" },
+  { value: "fish", label: "Cá" },
+  { value: "other", label: "Khác" },
 ];
 
 export default function AddPetScreen() {
   const router = useRouter();
   const { createPetForUser } = usePetStore();
 
-  const [name, setName] = useState('');
-  const [type, setType] = useState<PetType>('dog');
-  const [breed, setBreed] = useState('');
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [photo, setPhoto] = useState('');
+  const [name, setName] = useState("");
+  const [type, setType] = useState<PetType>("dog");
+  const [breed, setBreed] = useState("");
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [gender, setGender] = useState<"male" | "female">("male");
+  const [photo, setPhoto] = useState("");
   const [birthDate, setBirthDate] = useState<Date>(new Date());
-  const [color, setColor] = useState('');
-  const [microchipId, setMicrochipId] = useState('');
+  const [color, setColor] = useState("");
+  const [microchipId, setMicrochipId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -67,11 +67,12 @@ export default function AddPetScreen() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = 'Vui lòng nhập tên';
-    if (!breed.trim()) newErrors.breed = 'Vui lòng nhập giống';
-    if (!age.trim() || isNaN(Number(age))) newErrors.age = 'Tuổi phải là số';
-    if (!weight.trim() || isNaN(Number(weight))) newErrors.weight = 'Cân nặng phải là số';
-    if (!color.trim()) newErrors.color = 'Vui lòng nhập màu lông';
+    if (!name.trim()) newErrors.name = "Vui lòng nhập tên";
+    if (!breed.trim()) newErrors.breed = "Vui lòng nhập giống";
+    if (!age.trim() || isNaN(Number(age))) newErrors.age = "Tuổi phải là số";
+    if (!weight.trim() || isNaN(Number(weight)))
+      newErrors.weight = "Cân nặng phải là số";
+    if (!color.trim()) newErrors.color = "Vui lòng nhập màu lông";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -81,9 +82,9 @@ export default function AddPetScreen() {
     setLoading(true);
 
     try {
-      const userJson = await AsyncStorage.getItem('user');
+      const userJson = await AsyncStorage.getItem("user");
       const userId = userJson ? JSON.parse(userJson).id : null;
-      if (!userId) throw new Error('Không tìm thấy user');
+      if (!userId) throw new Error("Không tìm thấy user");
 
       await createPetForUser(userId, {
         name,
@@ -92,21 +93,25 @@ export default function AddPetScreen() {
         age: Number(age),
         weight: Number(weight),
         gender,
-        photo: photo || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
-        birthDate: birthDate.toISOString().split('T')[0],
+        photo:
+          photo ||
+          "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+        birthDate: birthDate.toISOString().split("T")[0],
         color,
         microchipId: microchipId || undefined,
         isActive: true,
-        imageUrl: photo || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
+        imageUrl:
+          photo ||
+          "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
         vaccinated: false, // Default value, update as needed
       });
 
-      Alert.alert('Thành công', 'Đã thêm thú cưng mới', [
-        { text: 'OK', onPress: () => router.replace('/') }
+      Alert.alert("Thành công", "Đã thêm thú cưng mới", [
+        { text: "OK", onPress: () => router.replace("/") },
       ]);
     } catch (err) {
       console.error(err);
-      Alert.alert('Lỗi', 'Không thể thêm thú cưng. Vui lòng thử lại.');
+      Alert.alert("Lỗi", "Không thể thêm thú cưng. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -116,7 +121,7 @@ export default function AddPetScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Thêm thú cưng mới',
+          title: "Thêm thú cưng mới",
           headerShadowVisible: false,
           headerStyle: { backgroundColor: Colors.background },
         }}
@@ -150,13 +155,21 @@ export default function AddPetScreen() {
         <View style={styles.group}>
           <Text style={styles.label}>Loại *</Text>
           <View style={styles.options}>
-            {petTypes.map(o => (
+            {petTypes.map((o) => (
               <TouchableOpacity
                 key={o.value}
-                style={[styles.optionBtn, type === o.value && styles.optionActive]}
+                style={[
+                  styles.optionBtn,
+                  type === o.value && styles.optionActive,
+                ]}
                 onPress={() => setType(o.value)}
               >
-                <Text style={[styles.optionTxt, type === o.value && styles.optionTxtActive]}>
+                <Text
+                  style={[
+                    styles.optionTxt,
+                    type === o.value && styles.optionTxtActive,
+                  ]}
+                >
                   {o.label}
                 </Text>
               </TouchableOpacity>
@@ -199,7 +212,9 @@ export default function AddPetScreen() {
               placeholderTextColor={Colors.textLight}
               keyboardType="numeric"
             />
-            {errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
+            {errors.weight && (
+              <Text style={styles.errorText}>{errors.weight}</Text>
+            )}
           </View>
         </View>
 
@@ -207,18 +222,34 @@ export default function AddPetScreen() {
           <Text style={styles.label}>Giới tính *</Text>
           <View style={styles.row}>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === 'male' && styles.genderActive]}
-              onPress={() => setGender('male')}
+              style={[
+                styles.genderBtn,
+                gender === "male" && styles.genderActive,
+              ]}
+              onPress={() => setGender("male")}
             >
-              <Text style={[styles.genderTxt, gender === 'male' && styles.genderTxtActive]}>
+              <Text
+                style={[
+                  styles.genderTxt,
+                  gender === "male" && styles.genderTxtActive,
+                ]}
+              >
                 Đực
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === 'female' && styles.genderActive]}
-              onPress={() => setGender('female')}
+              style={[
+                styles.genderBtn,
+                gender === "female" && styles.genderActive,
+              ]}
+              onPress={() => setGender("female")}
             >
-              <Text style={[styles.genderTxt, gender === 'female' && styles.genderTxtActive]}>
+              <Text
+                style={[
+                  styles.genderTxt,
+                  gender === "female" && styles.genderTxtActive,
+                ]}
+              >
                 Cái
               </Text>
             </TouchableOpacity>
@@ -253,14 +284,13 @@ export default function AddPetScreen() {
           />
         </View>
 
-        {loading
-          ? <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
-          : (
-            <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-              <Text style={styles.submitTxt}>Thêm thú cưng</Text>
-            </TouchableOpacity>
-          )
-        }
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
+        ) : (
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={styles.submitTxt}>Thêm thú cưng</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -269,51 +299,70 @@ export default function AddPetScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: 16 },
-  imageSection: { alignItems: 'center', marginBottom: 24 },
+  imageSection: { alignItems: "center", marginBottom: 24 },
   imageWrapper: {
-    width: 120, height: 120, borderRadius: 60,
-    backgroundColor: Colors.lightGray, overflow: 'hidden',
-    justifyContent: 'center', alignItems: 'center'
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.lightGray,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  image: { width: '100%', height: '100%' },
-  placeholder: { justifyContent: 'center', alignItems: 'center' },
+  image: { width: "100%", height: "100%" },
+  placeholder: { justifyContent: "center", alignItems: "center" },
   placeholderText: { marginTop: 8, color: Colors.primary },
 
   group: { marginBottom: 16 },
-  label: { marginBottom: 8, fontSize: 14, fontWeight: '500', color: Colors.text },
+  label: {
+    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.text,
+  },
   input: {
-    backgroundColor: Colors.card, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1, borderColor: Colors.border,
-    color: Colors.text
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    color: Colors.text,
   },
   errorInput: { borderColor: Colors.error },
   errorText: { marginTop: 4, color: Colors.error },
 
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   half: { flex: 1 },
 
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  options: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   optionBtn: {
-    paddingHorizontal: 12, paddingVertical: 8,
-    backgroundColor: Colors.lightGray, borderRadius: 20
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.lightGray,
+    borderRadius: 20,
   },
   optionActive: { backgroundColor: Colors.primary },
   optionTxt: { color: Colors.textLight },
-  optionTxtActive: { color: Colors.card, fontWeight: '500' },
+  optionTxtActive: { color: Colors.card, fontWeight: "500" },
 
   genderBtn: {
-    flex: 1, paddingVertical: 10,
-    backgroundColor: Colors.lightGray, borderRadius: 8,
-    alignItems: 'center'
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: Colors.lightGray,
+    borderRadius: 8,
+    alignItems: "center",
   },
   genderActive: { backgroundColor: Colors.primary },
   genderTxt: { color: Colors.textLight },
-  genderTxtActive: { color: Colors.card, fontWeight: '500' },
+  genderTxtActive: { color: Colors.card, fontWeight: "500" },
 
   submitBtn: {
-    marginTop: 16, backgroundColor: Colors.primary,
-    paddingVertical: 14, borderRadius: 8, alignItems: 'center'
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
   },
-  submitTxt: { color: Colors.card, fontWeight: '600' },
+  submitTxt: { color: Colors.card, fontWeight: "600" },
 });
