@@ -1,135 +1,135 @@
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 export interface Pet {
-  id: string;       // check  
-  name: string;      // check
-  species: string;  // check
-  breed: string;   // check
-  age: number;
-  weight: number;
-  gender: 'male' | 'female';
-  imageUrl: string;
-  birthDate: string;
-  color: string;
-  microchipId?: string;
-  isActive: boolean;
-  vaccinated: boolean;
-  photo: string;
+    id: string; // check
+    name: string; // check
+    species: string; // check
+    breed: string; // check
+    age: number;
+    weight: number;
+    gender: 'male' | 'female';
+    imageUrl: string;
+    birthDate: string;
+    color: string;
+    microchipId?: string;
+    isActive: boolean;
+    vaccinated: boolean;
+    photo: string;
 }
 
 export interface HealthRecord {
-  id: string;
-  petId: string;
-  date: string;
-  weight: number;
-  symptoms?: string;
-  diagnosis?: string;
-  treatment?: string;
-  notes?: string;
-  vetVisit: boolean;
-  vetName?: string;
+    id: string;
+    petId: string;
+    date: string;
+    weight: number;
+    symptoms?: string;
+    diagnosis?: string;
+    treatment?: string;
+    notes?: string;
+    vetVisit: boolean;
+    vetName?: string;
 }
 
 export interface Vaccination {
-  id: string;
-  petId: string;
-  name: string;
-  date: string;
-  nextDueDate: string;
-  vetName: string;
-  notes?: string;
-  completed: boolean;
+    id: string;
+    petId: string;
+    name: string;
+    date: string;
+    nextDueDate: string;
+    vetName: string;
+    notes?: string;
+    completed: boolean;
 }
 
 export interface MedicalDocument {
-  id: string;
-  petId: string;
-  title: string;
-  type: 'lab_result' | 'prescription' | 'xray' | 'certificate' | 'other';
-  date: string;
-  description?: string;
-  imageUrl?: string;
-  vetName?: string;
-  clinicName?: string;
-  notes?: string;
+    id: string;
+    petId: string;
+    title: string;
+    type: 'lab_result' | 'prescription' | 'xray' | 'certificate' | 'other';
+    date: string;
+    description?: string;
+    imageUrl?: string;
+    vetName?: string;
+    clinicName?: string;
+    notes?: string;
 }
 
 export interface Reminder {
-  id: string;
-  petId: string;
-  title: string;
-  description?: string;
-  date: string;
-  time: string;
-  repeat: 'none' | 'daily' | 'weekly' | 'monthly';
-  type: 'feeding' | 'medication' | 'grooming' | 'exercise' | 'vet' | 'other';
-  completed: boolean;
+    id: string;
+    petId: string;
+    title: string;
+    description?: string;
+    date: string;
+    time: string;
+    repeat: 'none' | 'daily' | 'weekly' | 'monthly';
+    type: 'feeding' | 'medication' | 'grooming' | 'exercise' | 'vet' | 'other';
+    completed: boolean;
 }
 
 export interface Activity {
-  id: string;
-  petId: string;
-  type: 'walk' | 'play' | 'rest' | 'eat' | 'other';
-  duration?: number; // in minutes
-  distance?: number; // in meters
-  date: string;
-  time: string;
-  notes?: string;
+    id: string;
+    petId: string;
+    type: 'walk' | 'play' | 'rest' | 'eat' | 'other';
+    duration?: number; // in minutes
+    distance?: number; // in meters
+    date: string;
+    time: string;
+    notes?: string;
 }
 
 export interface Post {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  content: string;
-  images?: string[];
-  likes: number;
-  comments: number;
-  date: string;
-  saved: boolean;
-  liked: boolean;
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar: string;
+    content: string;
+    images?: string[];
+    likes: number;
+    comments: number;
+    date: string;
+    saved: boolean;
+    liked: boolean;
 }
 
 export interface Comment {
-  id: string;
-  postId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  content: string;
-  date: string;
-  likes: number;
+    id: string;
+    postId: string;
+    userId: string;
+    userName: string;
+    userAvatar: string;
+    content: string;
+    date: string;
+    likes: number;
 }
 
 export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  category: 'food' | 'toys' | 'accessories' | 'health' | 'grooming' | 'other';
-  rating: number;
-  reviews: number;
-  inStock: boolean;
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    imageUrl: string;
+    category: 'food' | 'toys' | 'accessories' | 'health' | 'grooming' | 'other';
+    rating: number;
+    reviews: number;
+    inStock: boolean;
 }
 
 export interface Message {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  timestamp: string;
-  read: boolean;
+    id: string;
+    senderId: string;
+    receiverId: string;
+    content: string;
+    timestamp: string;
+    read: boolean;
 }
 
 export interface UserDoc {
-    create_at:  FirebaseFirestoreTypes.Timestamp;
+    create_at: FirebaseFirestoreTypes.Timestamp;
     email: string;
     language: string;
     password: string;
     phone_number: string;
     profile_picture: string;
-    updated_at : FirebaseFirestoreTypes.Timestamp;
+    updated_at: FirebaseFirestoreTypes.Timestamp;
     username: string;
 }
