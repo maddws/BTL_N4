@@ -26,6 +26,7 @@ export default function ShopScreen() {
     const router = useRouter();
     const { products, getCartItems, fetchProducts } = useShopStore();
     // fetchProducts();
+    // fetchProducts();
     // console.log("Fetched")
     let user_id = '';
     AsyncStorage.getItem('user').then((user) => {
@@ -43,7 +44,7 @@ export default function ShopScreen() {
     // }
 
     // const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-    const cartItemCount = 0;
+    const cartItemCount = cartItems.length;
 
     const filteredProducts =
         activeCategory === 'all'

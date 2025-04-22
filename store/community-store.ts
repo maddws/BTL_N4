@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { posts as mockPosts } from '@/mocks/community';
+import { db } from '@/config/firebase';
+import { collection, query, orderBy, getDocs, addDoc, where } from 'firebase/firestore';
 
 export interface Author {
     id: string;
@@ -26,7 +28,7 @@ interface CommunityState {
     savedPosts: string[];
 
     // Actions
-    addPost: (post: Post) => void;
+    addPost: (post: Post) => Promise<void>; // Change to Promise<void> for async
     deletePost: (postId: string) => void;
     toggleLike: (postId: string) => void;
     toggleSave: (postId: string) => void;
@@ -34,7 +36,10 @@ interface CommunityState {
     unlikePost: (postId: string) => void;
     savePost: (postId: string) => void;
     unsavePost: (postId: string) => void;
+    reFetchFeed: () => void;
+    // fetchCommentPost: (postId: string) => void; // Fetch comments for a specific post
 
+    resetFeed: () => void; // Reset to mock data
     // Getters
     getSavedPosts: () => Post[];
 }
@@ -42,13 +47,77 @@ interface CommunityState {
 export const useCommunityStore = create<CommunityState>()(
     persist(
         (set, get) => ({
-            posts: mockPosts,
+            posts: [],
             savedPosts: [],
+            resetFeed: () => set({ posts: [] }), // Reset to mock data
 
-            addPost: (post) =>
+            reFetchFeed: async () => {
+                const userId = await AsyncStorage.getItem('user').then((user) => {
+                    return JSON.parse(user ? user : '{}');
+                });
+                const postDB = collection(db, 'Posts');
+                const q = query(postDB, orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                const posts: Post[] = [];
+                for (const doc of querySnapshot.docs) {
+                    const postData = doc.data() as Post;
+                    // get number of cmt
+                    const cmtDB = collection(db, 'Comments');
+                    const q = query(cmtDB, where('postId', '==', doc.id));
+                    const querySnapshotCmt = await getDocs(q);
+                    const commentsCount = querySnapshotCmt.size;
+                    // check if post is liked
+                    const likeDB = collection(db, 'PostLikes');
+                    const qLike = query(
+                        likeDB,
+                        where('user_id', '==', userId.id),
+                        where('post_id', '==', doc.id)
+                    );
+                    const querySnapshotLike = await getDocs(qLike);
+                    if (!querySnapshotLike.empty) {
+                        postData.isLiked = true;
+                    } else {
+                        postData.isLiked = false;
+                    }
+                    // check if post is saved
+                    const saveDB = collection(db, 'SavedPosts');
+                    const qSave = query(
+                        saveDB,
+                        where('post_id', '==', doc.id),
+                        where('user_id', '==', userId.id)
+                    );
+                    const querySnapshotSave = await getDocs(qSave);
+                    if (!querySnapshotSave.empty) {
+                        postData.isSaved = true;
+                    } else {
+                        postData.isSaved = false;
+                    }
+                    // check number of likes
+                    const likeCountDB = collection(db, 'PostLikes');
+                    const qLikeCount = query(likeCountDB, where('post_id', '==', doc.id));
+                    const querySnapshotLikeCount = await getDocs(qLikeCount);
+                    const likesCount = querySnapshotLikeCount.size;
+
+                    posts.push({
+                        ...postData,
+                        id: doc.id,
+                        comments: commentsCount,
+                        likes: likesCount,
+                    });
+                    console.log('Post:', postData);
+                }
+                // console.log(posts);
+                set({ posts });
+            },
+
+            addPost: async (post) => {
+                const { id, ...postWithoutId } = post;
+                const docRef = await addDoc(collection(db, 'Posts'), postWithoutId);
+                // console.log(post);
                 set((state) => ({
-                    posts: [post, ...state.posts],
-                })),
+                    posts: [{ ...postWithoutId, id: docRef.id }, ...state.posts],
+                }));
+            },
 
             deletePost: (postId) =>
                 set((state) => ({
@@ -144,153 +213,3 @@ export const useCommunityStore = create<CommunityState>()(
         }
     )
 );
-
-// import { create } from 'zustand';
-// import { persist, createJSONStorage } from 'zustand/middleware';
-// // import { getProductsFromFirestore, addToCartInFirestore } from '@/utils/firestore'; // Import các hàm Firestore
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import {
-//     collection,
-//     getDoc,
-//     setDoc,
-//     getDocs,
-//     addDoc,
-//     updateDoc,
-//     doc,
-//     deleteDoc,
-// } from 'firebase/firestore';
-// import { Product } from '@/types/pet'; // Import kiểu dữ liệu sản phẩm
-
-// import { db } from '@/config/firebase'; // Import db từ firebase config
-
-// const productsCollection = collection(db, 'products');
-// const cartCollection = collection(db, 'carts'); // Giả sử giỏ hàng lưu trong Firestore
-
-// // Lấy tất cả sản phẩm từ Firestore
-// export const getProductsFromFirestore = async () => {
-//     const querySnapshot = await getDocs(productsCollection);
-//     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-// };
-
-// // Thêm một sản phẩm vào giỏ hàng
-// export const addToCartInFirestore = async (userId: string, productId: string, quantity: number) => {
-//     const cartRef = doc(cartCollection, userId);
-//     const cartSnapshot = await getDoc(cartRef);
-//     if (cartSnapshot.exists()) {
-//         const existingCart = cartSnapshot.data().items || [];
-//         existingCart.push({ productId, quantity });
-//         await updateDoc(cartRef, { items: existingCart });
-//     } else {
-//         await setDoc(cartRef, { userId, items: [{ productId, quantity }] });
-//     }
-// };
-
-// interface CartItem {
-//     productId: string;
-//     quantity: number;
-// }
-
-// interface ShopState {
-//     products: Product[];
-//     cart: CartItem[];
-//     favorites: string[];
-
-//     // Actions
-//     addToCart: (userId: string, productId: string, quantity?: number) => void;
-//     removeFromCart: (userId: string, productId: string) => void;
-//     updateCartItemQuantity: (userId: string, productId: string, quantity: number) => void;
-//     clearCart: () => void;
-//     // Getters
-//     getCartItems: () => { product: Product; quantity: number }[];
-//     getCartTotal: () => number;
-//     getFavoriteProducts: () => Product[];
-//     getProductsByCategory: (category: string) => Product[];
-//     getProductById: (id: string) => Product | undefined;
-//     getProductsBySearch: (query: string) => Product[];
-// }
-
-// export const useShopStore = create<ShopState>()(
-//     persist(
-//         (set, get) => ({
-//             products: [], // Mảng sản phẩm sẽ được lấy từ Firestore
-//             cart: [],
-//             favorites: [],
-
-//             // Fetch products from Firestore when the store is initialized
-//             fetchProducts: async () => {
-//                 const products = await getProductsFromFirestore();
-//                 set({ products });
-//             },
-
-//             addToCart: async (userId, productId, quantity = 1) => {
-//                 // Lấy giỏ hàng từ Firestore
-//                 await addToCartInFirestore(userId, productId, quantity);
-
-//                 // Cập nhật lại giỏ hàng trong store
-//                 const newCart = [...get().cart, { productId, quantity }];
-//                 set({ cart: newCart });
-//             },
-
-//             removeFromCart: (productId) =>
-//                 set((state) => ({
-//                     cart: state.cart.filter((item) => item.productId !== productId),
-//                 })),
-
-//             updateCartItemQuantity: (productId, quantity) =>
-//                 set((state) => ({
-//                     cart: state.cart.map((item) =>
-//                         item.productId === productId
-//                             ? { ...item, quantity: Math.max(1, quantity) }
-//                             : item
-//                     ),
-//                 })),
-
-//             clearCart: () => set({ cart: [] }),
-
-//             getCartItems: () => {
-//                 const { products, cart } = get();
-//                 return cart
-//                     .map((item) => ({
-//                         product: products.find((p) => p.id === item.productId)!,
-//                         quantity: item.quantity,
-//                     }))
-//                     .filter((item) => item.product);
-//             },
-
-//             getCartTotal: () => {
-//                 const cartItems = get().getCartItems();
-//                 return cartItems.reduce(
-//                     (total, item) => total + item.product.price * item.quantity,
-//                     0
-//                 );
-//             },
-
-//             getFavoriteProducts: () => {
-//                 const { products, favorites } = get();
-//                 return products.filter((product) => favorites.includes(product.id));
-//             },
-
-//             getProductsByCategory: (category) => {
-//                 return get().products.filter((product) => product.category === category);
-//             },
-
-//             getProductById: (id) => {
-//                 return get().products.find((product) => product.id === id);
-//             },
-
-//             getProductsBySearch: (query) => {
-//                 const searchTerm = query.toLowerCase().trim();
-//                 return get().products.filter(
-//                     (product) =>
-//                         product.name.toLowerCase().includes(searchTerm) ||
-//                         product.description.toLowerCase().includes(searchTerm) ||
-//                         product.category.toLowerCase().includes(searchTerm)
-//                 );
-//             },
-//         }),
-//         {
-//             name: 'shop-storage',
-//             storage: createJSONStorage(() => AsyncStorage),
-//         }
-//     )
-// );

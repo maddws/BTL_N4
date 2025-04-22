@@ -16,6 +16,17 @@ import { Heart, MessageCircle, Bookmark, Send, ArrowLeft, Share2 } from 'lucide-
 import Colors from '@/constants/colors';
 import { useCommunityStore } from '@/store/community-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { db } from '@/config/firebase';
+import {
+    addDoc,
+    collection,
+    orderBy,
+    serverTimestamp,
+    getDocs,
+    query,
+    where,
+    deleteDoc,
+} from 'firebase/firestore';
 
 interface Comment {
     id: string;
@@ -30,41 +41,42 @@ interface Comment {
     isLiked: boolean;
 }
 
+async function fetchCommentsData(postId: string, setComments: any) {
+    const commentsRef = collection(db, 'Comments');
+    const q = query(commentsRef, where('postId', '==', postId));
+
+    // console.log('inside fetchCommentsData');
+
+    // Lắng nghe các thay đổi trong comments
+    const querySnapshot = await getDocs(q);
+    // console.log('Fetched comments:', querySnapshot.docs.length);
+    const comments: Comment[] = [];
+    querySnapshot.forEach((doc) => {
+        const commentData = doc.data() as Comment;
+        comments.push({ ...commentData, id: doc.id });
+        // console.log('Comment:', commentData);
+    });
+    // console.log(comments);
+    setComments(comments.reverse());
+    return comments;
+}
+
 export default function PostDetailsScreen() {
     const { id } = useLocalSearchParams();
+    const refetchFeed = useCommunityStore((state) => state.reFetchFeed);
     const router = useRouter();
     const { posts, toggleLike, toggleSave } = useCommunityStore();
     const { userProfile } = useSettingsStore();
     const [comment, setComment] = useState('');
-    const [comments, setComments] = useState<Comment[]>([
-        {
-            id: '1',
-            author: {
-                id: 'user2',
-                name: 'Nguyễn Văn A',
-                avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
-            },
-            content: 'Thú cưng của bạn dễ thương quá! Giống gì vậy?',
-            createdAt: '2023-05-15T08:30:00Z',
-            likes: 2,
-            isLiked: false,
-        },
-        {
-            id: '2',
-            author: {
-                id: 'user3',
-                name: 'Trần Thị B',
-                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330',
-            },
-            content: 'Tôi cũng có một bé giống như vậy. Chúng rất thông minh và dễ huấn luyện.',
-            createdAt: '2023-05-15T09:15:00Z',
-            likes: 1,
-            isLiked: false,
-        },
-    ]);
+    const [comments, setComments] = useState<Comment[]>([]);
 
     const post = posts.find((p) => p.id === id);
 
+    if (post) {
+        // console.log('Post found:', post);
+        // console.log('Post:', post.createdAt);
+        fetchCommentsData(post.id, setComments);
+    }
     if (!post) {
         return (
             <SafeAreaView style={styles.container}>
@@ -82,44 +94,68 @@ export default function PostDetailsScreen() {
         );
     }
 
-    const handleLike = () => {
-        toggleLike(post.id);
-    };
+    // const handleLike = () => {
+    //     toggleLike(post.id);
+    // };
 
-    const handleSave = () => {
-        toggleSave(post.id);
-    };
+    // const handleSave = () => {
+    //     toggleSave(post.id);
+    // };
+    const handleLike = async () => {
+        console.log('handleLike called');
+        const userId = userProfile?.id; // Get current user id
+        const postId = post.id; // Get the post id
 
-    const handleShare = () => {
-        // Share functionality would be implemented here
-        alert('Chia sẻ bài viết');
-    };
+        if (!userId) return; // Ensure user is logged in
 
-    const handleComment = () => {
-        if (!comment.trim()) return;
-        if (!userProfile) {
-            alert('Vui lòng đăng nhập để bình luận');
-            return;
+        // Check if the user has already liked the post
+        const likeRef = collection(db, 'PostLikes');
+        const q = query(likeRef, where('user_id', '==', userId), where('post_id', '==', postId));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // If the like already exists, remove it (unlike)
+            console.log('Like already exists, removing it');
+            querySnapshot.forEach((doc) => {
+                deleteDoc(doc.ref); // Delete the like from Firestore
+            });
+            toggleLike(post.id); // Update local state
+        } else {
+            // If the like doesn't exist, add it
+            console.log('Like does not exist, adding it');
+            await addDoc(likeRef, { user_id: userId, post_id: postId });
+            toggleLike(post.id); // Update local state
         }
-
-        const newComment: Comment = {
-            id: Date.now().toString(),
-            author: {
-                id: 'user1',
-                name: userProfile.name,
-                avatar:
-                    userProfile.avatar ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-            },
-            content: comment,
-            createdAt: new Date().toISOString(),
-            likes: 0,
-            isLiked: false,
-        };
-
-        setComments([...comments, newComment]);
-        setComment('');
     };
+
+    const handleSave = async () => {
+        const userId = userProfile?.id; // Get current user id
+        const postId = post.id; // Get the post id
+
+        if (!userId) return; // Ensure user is logged in
+
+        // Check if the post is already saved by the user
+        const savedRef = collection(db, 'SavedPosts');
+        const q = query(savedRef, where('user_id', '==', userId), where('post_id', '==', postId));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // If the post is already saved, remove it
+            querySnapshot.forEach((doc) => {
+                deleteDoc(doc.ref); // Remove the saved post
+            });
+            toggleSave(post.id); // Update local state
+        } else {
+            // If the post is not saved, save it
+            await addDoc(savedRef, { user_id: userId, post_id: postId });
+            toggleSave(post.id); // Update local state
+        }
+    };
+
+    // const handleShare = () => {
+    //     // Share functionality would be implemented here
+    //     alert('Chia sẻ bài viết');
+    // };
 
     const toggleLikeComment = (commentId: string) => {
         setComments(
@@ -137,14 +173,65 @@ export default function PostDetailsScreen() {
         );
     };
 
-    const formatTime = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.round(diffMs / 60000);
-        const diffHours = Math.round(diffMins / 60);
-        const diffDays = Math.round(diffHours / 24);
+    const handleComment = async () => {
+        if (!comment.trim()) return;
+        if (!userProfile) {
+            alert('Vui lòng đăng nhập để bình luận');
+            return;
+        }
 
+        const newComment = {
+            postId: post.id,
+            author: {
+                id: userProfile.id,
+                name: userProfile.name,
+                avatar:
+                    userProfile.avatar ||
+                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+            },
+            content: comment,
+            createdAt: serverTimestamp(),
+            likes: 0,
+            isLiked: false,
+        };
+
+        // Thêm bình luận vào Firestore
+        await addDoc(collection(db, 'Comments'), newComment);
+
+        setComment('');
+    };
+
+    // const formatTime = (dateString: string) => {
+    //     const date = new Date(dateString);
+    //     const now = new Date();
+    //     const diffMs = now.getTime() - date.getTime();
+    //     const diffMins = Math.round(diffMs / 60000);
+    //     const diffHours = Math.round(diffMins / 60);
+    //     const diffDays = Math.round(diffHours / 24);
+
+    //     if (diffMins < 60) {
+    //         return `${diffMins} phút trước`;
+    //     } else if (diffHours < 24) {
+    //         return `${diffHours} giờ trước`;
+    //     } else {
+    //         return `${diffDays} ngày trước`;
+    //     }
+    // };
+    const formatTime = (timestamp: { seconds: number; nanoseconds: number }) => {
+        // Chuyển đổi Firestore timestamp (seconds + nanoseconds) thành đối tượng Date
+        if (!timestamp || !timestamp.seconds) {
+            return '0 phút trước'; // Trả về giá trị mặc định nếu timestamp không hợp lệ
+        }
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000); // nanoseconds / 1000000 để chuyển đổi nanoseconds thành milliseconds
+        const now = new Date();
+
+        // Tính toán sự khác biệt giữa thời gian hiện tại và thời gian đã cho
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.round(diffMs / 60000); // Chuyển đổi sang phút
+        const diffHours = Math.round(diffMins / 60); // Chuyển đổi sang giờ
+        const diffDays = Math.round(diffHours / 24); // Chuyển đổi sang ngày
+
+        // Trả về thời gian theo định dạng "xx phút trước", "xx giờ trước", "xx ngày trước"
         if (diffMins < 60) {
             return `${diffMins} phút trước`;
         } else if (diffHours < 24) {
@@ -172,7 +259,12 @@ export default function PostDetailsScreen() {
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: Colors.background },
                     headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                router.back();
+                                refetchFeed();
+                            }}
+                        >
                             <ArrowLeft size={24} color={Colors.text} />
                         </TouchableOpacity>
                     ),

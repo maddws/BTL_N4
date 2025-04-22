@@ -13,11 +13,35 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
+import * as FileSystem from 'expo-file-system';
 import { ArrowLeft, Image as ImageIcon, X, Camera, Send } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { useCommunityStore } from '@/store/community-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { db } from '@/config/firebase';
+import { serverTimestamp } from 'firebase/firestore';
+
+const IMGBB_API_KEY = 'f73e4d196b983adeafdd7c033a8bc400';
+
+async function uploadToImgbb(base64Image: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('image', base64Image); // Base64 string
+    // nếu bạn muốn đặt tên file:
+    // formData.append('name', 'my_uploaded_image');
+
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    const json = await res.json();
+    if (!json.success) {
+        throw new Error(`Upload failed: ${JSON.stringify(json)}`);
+    }
+    // URL thực của ảnh
+    return json.data.url as string;
+}
 
 export default function CreatePostScreen() {
     const router = useRouter();
@@ -27,6 +51,7 @@ export default function CreatePostScreen() {
     const [content, setContent] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // console.log(serverTimestamp()); // 1697030400
 
     const pickImage = async () => {
         try {
@@ -76,48 +101,107 @@ export default function CreatePostScreen() {
         setImages(newImages);
     };
 
-    const handleSubmit = () => {
+    // const handleSubmit = () => {
+    //     if (!content.trim()) {
+    //         Alert.alert('Lỗi', 'Vui lòng nhập nội dung bài viết');
+    //         return;
+    //     }
+
+    //     if (!userProfile) {
+    //         Alert.alert('Lỗi', 'Vui lòng đăng nhập để đăng bài');
+    //         return;
+    //     }
+
+    //     setIsSubmitting(true);
+
+    //     // Create new post
+    //     const newPost = {
+    //         id: Date.now().toString(),
+    //         author: {
+    //             id: 'user1',
+    //             name: userProfile.name,
+    //             avatar:
+    //                 userProfile.avatar ||
+    //                 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+    //         },
+    //         content: content,
+    //         images: images.length > 0 ? images : undefined,
+    //         likes: 0,
+    //         comments: 0,
+    //         createdAt: new Date().toISOString(),
+    //         isLiked: false,
+    //         isSaved: false,
+    //     };
+
+    //     // Add post to store
+    //     addPost(newPost);
+
+    //     // Navigate back to community screen
+    //     Alert.alert('Thành công', 'Bài viết của bạn đã được đăng', [
+    //         {
+    //             text: 'OK',
+    //             onPress: () => router.push('/(tabs)/community'),
+    //         },
+    //     ]);
+    // };
+    const handleSubmit = async () => {
         if (!content.trim()) {
             Alert.alert('Lỗi', 'Vui lòng nhập nội dung bài viết');
             return;
         }
-
         if (!userProfile) {
             Alert.alert('Lỗi', 'Vui lòng đăng nhập để đăng bài');
             return;
         }
 
         setIsSubmitting(true);
+        try {
+            // 2) Convert từng URI thành Base64 rồi upload
+            const uploadedUrls: string[] = [];
+            for (let uri of images) {
+                // đọc file local thành base64
+                const b64 = await FileSystem.readAsStringAsync(uri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+                // gọi imgbb
+                const url = await uploadToImgbb(b64);
+                uploadedUrls.push(url);
+            }
 
-        // Create new post
-        const newPost = {
-            id: Date.now().toString(),
-            author: {
-                id: 'user1',
-                name: userProfile.name,
-                avatar:
-                    userProfile.avatar ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-            },
-            content: content,
-            images: images.length > 0 ? images : undefined,
-            likes: 0,
-            comments: 0,
-            createdAt: new Date().toISOString(),
-            isLiked: false,
-            isSaved: false,
-        };
+            // 3) Chuẩn bị object post, dùng URL từ imgbb
+            const newPost = {
+                id: '',
+                author: {
+                    id: userProfile.id,
+                    name: userProfile.name,
+                    avatar:
+                        userProfile.avatar ||
+                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+                },
+                content: content.trim(),
+                images: uploadedUrls.length > 0 ? uploadedUrls : null,
+                likes: 0,
+                comments: 0,
+                createdAt: serverTimestamp(), // timestamp của Firestore
+                isLiked: false,
+                isSaved: false,
+            };
 
-        // Add post to store
-        addPost(newPost);
+            // 4) Lưu vào Firestore
+            addPost(newPost); // thêm vào local store trước
 
-        // Navigate back to community screen
-        Alert.alert('Thành công', 'Bài viết của bạn đã được đăng', [
-            {
-                text: 'OK',
-                onPress: () => router.push('/(tabs)/community'),
-            },
-        ]);
+            // 5) Cập nhật local store (nếu vẫn muốn)
+            // addPost({ id: docRef.id, ...newPost });
+
+            Alert.alert('Thành công', 'Bài viết của bạn đã được đăng', [
+                { text: 'OK', onPress: () => router.push('/(tabs)/community') },
+            ]);
+        } catch (err: any) {
+            console.error(err);
+            Alert.alert('Lỗi', err.message || 'Không thể đăng bài');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

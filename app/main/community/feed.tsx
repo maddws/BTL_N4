@@ -15,8 +15,9 @@ import { Plus } from 'lucide-react-native';
 import PostItem from '@/components/PostItem';
 
 export default function Feed() {
-    const { posts } = useCommunityStore();
+    const { posts, resetFeed } = useCommunityStore();
     const router = useRouter();
+    // resetFeed();
     return (
         <>
             <View style={styles.createPostContainer}>

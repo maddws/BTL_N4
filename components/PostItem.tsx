@@ -4,6 +4,9 @@ import { Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Post } from '@/types/pet';
 import { useCommunityStore } from '@/store/community-store';
+import { db } from '@/config/firebase';
+import { addDoc, collection, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface PostItemProps {
     post: Post;
@@ -12,29 +15,91 @@ interface PostItemProps {
 
 export default function PostItem({ post, onPress }: PostItemProps) {
     const { toggleLike, toggleSave } = useCommunityStore();
+    const userProfile = AsyncStorage.getItem('user').then((user) => {
+        if (user) {
+            const userData = JSON.parse(user);
+            return userData;
+        }
+        return null;
+    });
 
-    const handleLike = () => {
-        toggleLike(post.id);
+    // const handleLike = () => {
+    //     toggleLike(post.id);
+    // };
+
+    // const handleSave = () => {
+    //     toggleSave(post.id);
+    // };
+    const handleLike = async () => {
+        console.log('handleLike called');
+        const userId = userProfile._j.id; // Get current user id
+        const postId = post.id; // Get the post id
+
+        console.log('userId:', userId);
+        if (!userId) return; // Ensure user is logged in
+
+        // Check if the user has already liked the post
+        const likeRef = collection(db, 'PostLikes');
+        const q = query(likeRef, where('user_id', '==', userId), where('post_id', '==', postId));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // If the like already exists, remove it (unlike)
+            console.log('Like already exists, removing it');
+            querySnapshot.forEach((doc) => {
+                deleteDoc(doc.ref); // Delete the like from Firestore
+            });
+            toggleLike(post.id); // Update local state
+        } else {
+            // If the like doesn't exist, add it
+            console.log('Like does not exist, adding it');
+            await addDoc(likeRef, { user_id: userId, post_id: postId });
+            toggleLike(post.id); // Update local state
+        }
     };
 
-    const handleSave = () => {
-        toggleSave(post.id);
+    const handleSave = async () => {
+        const userId = userProfile._j.id; // Get current user id
+        const postId = post.id; // Get the post id
+
+        if (!userId) return; // Ensure user is logged in
+
+        // Check if the post is already saved by the user
+        const savedRef = collection(db, 'SavedPosts');
+        const q = query(savedRef, where('user_id', '==', userId), where('post_id', '==', postId));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // If the post is already saved, remove it
+            querySnapshot.forEach((doc) => {
+                deleteDoc(doc.ref); // Remove the saved post
+            });
+            toggleSave(post.id); // Update local state
+        } else {
+            // If the post is not saved, save it
+            await addDoc(savedRef, { user_id: userId, post_id: postId });
+            toggleSave(post.id); // Update local state
+        }
     };
 
-    const handleShare = () => {
-        // Share functionality would be implemented here
-        alert('Chia sẻ bài viết');
-    };
+    // const handleShare = () => {
+    //     // Share functionality would be implemented here
+    //     alert('Chia sẻ bài viết');
+    // };
 
     // Format date
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
+    const formatDate = (timestamp: { seconds: number; nanoseconds: number }) => {
+        // Chuyển đổi Firestore timestamp (seconds + nanoseconds) thành đối tượng Date
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000); // nanoseconds / 1000000 để chuyển đổi nanoseconds thành milliseconds
         const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.round(diffMs / 60000);
-        const diffHours = Math.round(diffMins / 60);
-        const diffDays = Math.round(diffHours / 24);
 
+        // Tính toán sự khác biệt giữa thời gian hiện tại và thời gian đã cho
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.round(diffMs / 60000); // Chuyển đổi sang phút
+        const diffHours = Math.round(diffMins / 60); // Chuyển đổi sang giờ
+        const diffDays = Math.round(diffHours / 24); // Chuyển đổi sang ngày
+
+        // Trả về thời gian theo định dạng "xx phút trước", "xx giờ trước", "xx ngày trước"
         if (diffMins < 60) {
             return `${diffMins} phút trước`;
         } else if (diffHours < 24) {
@@ -43,8 +108,25 @@ export default function PostItem({ post, onPress }: PostItemProps) {
             return `${diffDays} ngày trước`;
         }
     };
+    // const formatDate = (dateString: string) => {
+    //     const date = new Date(dateString);
+    //     const now = new Date();
+    //     const diffMs = now.getTime() - date.getTime();
+    //     const diffMins = Math.round(diffMs / 60000);
+    //     const diffHours = Math.round(diffMins / 60);
+    //     const diffDays = Math.round(diffHours / 24);
+
+    //     if (diffMins < 60) {
+    //         return `${diffMins} phút trước`;
+    //     } else if (diffHours < 24) {
+    //         return `${diffHours} giờ trước`;
+    //     } else {
+    //         return `${diffDays} ngày trước`;
+    //     }
+    // };
 
     // Ensure post.author exists to prevent "Cannot read property 'avatar' of undefined"
+    // console.log(post);
     const defaultAuthor = {
         id: 'unknown',
         name: 'Unknown',
@@ -53,6 +135,7 @@ export default function PostItem({ post, onPress }: PostItemProps) {
 
     const author = post.author || defaultAuthor;
     const createdAt = post.createdAt || new Date().toISOString();
+    // console.log(createdAt);
 
     return (
         <View style={styles.container}>

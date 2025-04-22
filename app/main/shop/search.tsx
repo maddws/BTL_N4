@@ -9,9 +9,7 @@ import ProductItem from '@/components/ProductItem';
 
 export default function SearchScreen() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<
-        ReturnType<typeof useShopStore.getState.getProductsBySearch>
-    >([]);
+    const [searchResults, setSearchResults] = useState<ReturnType<typeof getProductsBySearch>>([]);
     const router = useRouter();
     const { getProductsBySearch } = useShopStore();
 

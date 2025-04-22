@@ -20,6 +20,7 @@ import HomeCard from '@/components/HomeCard';
 import ReminderItem from '@/components/ReminderItem';
 import VaccinationItem from '@/components/VaccinationItem';
 import { usePetStore } from '@/store/pet-store';
+
 import type { UserDoc } from '@/types/pet';
 
 export default function HomeScreen() {

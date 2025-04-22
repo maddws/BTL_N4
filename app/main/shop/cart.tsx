@@ -5,6 +5,7 @@ import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useShopStore } from '@/store/shop-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CartScreen() {
     const router = useRouter();
@@ -15,7 +16,10 @@ export default function CartScreen() {
         updateCartItemQuantity,
         removeFromCart,
         clearCart,
+        // fetchSavedCart,
     } = useShopStore();
+    // const userId = AsyncStorage.getItem('user').then((user) => { JSON.parse(user).id; });
+    // fetchSavedCart();
 
     const cartItems = getCartItems();
     const cartTotal = getCartTotal();

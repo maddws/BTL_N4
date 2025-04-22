@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MessageCircle, Users, Plus } from 'lucide-react-native';
+import { MessageCircle, Users, Plus, Bookmark, Book } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import PostItem from '@/components/PostItem';
 import { useCommunityStore } from '@/store/community-store';
@@ -29,8 +29,9 @@ export default function CommunityScreen() {
     const [peers, setPeers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const { posts } = useCommunityStore();
+    const { posts, reFetchFeed } = useCommunityStore();
     const { userProfile } = useSettingsStore(); // expects { id: string, ... }
+    // reFetchFeed();
 
     // load list of chat‑peers whenever we switch to "chat"
     useEffect(() => {
@@ -133,7 +134,7 @@ export default function CommunityScreen() {
             showsVerticalScrollIndicator={false}
         >
             {posts
-                .filter((p) => p.saved)
+                .filter((p) => p.isSaved) // Lọc các bài viết đã được lưu
                 .map((p) => (
                     <PostItem
                         key={p.id}
@@ -157,7 +158,13 @@ export default function CommunityScreen() {
                     <TouchableOpacity
                         key={t}
                         style={[styles.tabButton, activeTab === t && styles.activeTabButton]}
-                        onPress={() => setActiveTab(t)}
+                        onPress={() => {
+                            setActiveTab(t);
+                            if (t === 'feed') {
+                                reFetchFeed();
+                                console.log('re-fetch feed');
+                            }
+                        }}
                     >
                         {t === 'feed' && (
                             <Users
@@ -172,7 +179,7 @@ export default function CommunityScreen() {
                             />
                         )}
                         {t === 'saved' && (
-                            <MessageCircle
+                            <Bookmark
                                 size={20}
                                 color={activeTab === t ? Colors.primary : Colors.textLight}
                             />
