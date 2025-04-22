@@ -101,9 +101,8 @@ export default function EditPetScreen() {
                 weight: Number(weight),
                 gender,
                 photo,
-                birthDate,
+                birthDate: birthDate.toISOString(),
                 color,
-                microchipId: chip,
                 isActive: true,
             });
             updatePet(petId, {
@@ -114,9 +113,8 @@ export default function EditPetScreen() {
                 weight: Number(weight),
                 gender,
                 photo,
-                birthDate,
+                birthDate: birthDate.toISOString(),
                 color,
-                microchipId: chip,
                 isActive: true,
             });
             Alert.alert('Thành công', 'Cập nhật thông tin thú cưng thành công', [
@@ -342,18 +340,6 @@ export default function EditPetScreen() {
                         placeholderTextColor={Colors.textLight}
                     />
                     {errors.color && <Text style={styles.errorText}>{errors.color}</Text>}
-                </View>
-
-                {/* Microchip */}
-                <View style={styles.group}>
-                    <Text style={styles.label}>Mã chip</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={chip}
-                        onChangeText={setChip}
-                        placeholder="Nhập mã chip"
-                        placeholderTextColor={Colors.textLight}
-                    />
                 </View>
 
                 {/* Save */}

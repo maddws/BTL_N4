@@ -91,11 +91,10 @@ export default function AddPetScreen() {
                 species: type,
                 age: Number(age),
                 weight: Number(weight),
-                gender,
+                gender: gender,
                 photo: photo || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
                 birthDate: birthDate.toISOString().split('T')[0],
-                color,
-                microchipId: microchipId || undefined,
+                color: color,
                 isActive: true,
                 imageUrl: photo || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
                 vaccinated: false, // Default value, update as needed
@@ -255,17 +254,6 @@ export default function AddPetScreen() {
                         placeholderTextColor={Colors.textLight}
                     />
                     {errors.color && <Text style={styles.errorText}>{errors.color}</Text>}
-                </View>
-
-                <View style={styles.group}>
-                    <Text style={styles.label}>Mã chip</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={microchipId}
-                        onChangeText={setMicrochipId}
-                        placeholder="Nhập mã chip (nếu có)"
-                        placeholderTextColor={Colors.textLight}
-                    />
                 </View>
 
                 {loading ? (
