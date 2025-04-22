@@ -144,3 +144,153 @@ export const useCommunityStore = create<CommunityState>()(
         }
     )
 );
+
+// import { create } from 'zustand';
+// import { persist, createJSONStorage } from 'zustand/middleware';
+// // import { getProductsFromFirestore, addToCartInFirestore } from '@/utils/firestore'; // Import các hàm Firestore
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import {
+//     collection,
+//     getDoc,
+//     setDoc,
+//     getDocs,
+//     addDoc,
+//     updateDoc,
+//     doc,
+//     deleteDoc,
+// } from 'firebase/firestore';
+// import { Product } from '@/types/pet'; // Import kiểu dữ liệu sản phẩm
+
+// import { db } from '@/config/firebase'; // Import db từ firebase config
+
+// const productsCollection = collection(db, 'products');
+// const cartCollection = collection(db, 'carts'); // Giả sử giỏ hàng lưu trong Firestore
+
+// // Lấy tất cả sản phẩm từ Firestore
+// export const getProductsFromFirestore = async () => {
+//     const querySnapshot = await getDocs(productsCollection);
+//     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+// };
+
+// // Thêm một sản phẩm vào giỏ hàng
+// export const addToCartInFirestore = async (userId: string, productId: string, quantity: number) => {
+//     const cartRef = doc(cartCollection, userId);
+//     const cartSnapshot = await getDoc(cartRef);
+//     if (cartSnapshot.exists()) {
+//         const existingCart = cartSnapshot.data().items || [];
+//         existingCart.push({ productId, quantity });
+//         await updateDoc(cartRef, { items: existingCart });
+//     } else {
+//         await setDoc(cartRef, { userId, items: [{ productId, quantity }] });
+//     }
+// };
+
+// interface CartItem {
+//     productId: string;
+//     quantity: number;
+// }
+
+// interface ShopState {
+//     products: Product[];
+//     cart: CartItem[];
+//     favorites: string[];
+
+//     // Actions
+//     addToCart: (userId: string, productId: string, quantity?: number) => void;
+//     removeFromCart: (userId: string, productId: string) => void;
+//     updateCartItemQuantity: (userId: string, productId: string, quantity: number) => void;
+//     clearCart: () => void;
+//     // Getters
+//     getCartItems: () => { product: Product; quantity: number }[];
+//     getCartTotal: () => number;
+//     getFavoriteProducts: () => Product[];
+//     getProductsByCategory: (category: string) => Product[];
+//     getProductById: (id: string) => Product | undefined;
+//     getProductsBySearch: (query: string) => Product[];
+// }
+
+// export const useShopStore = create<ShopState>()(
+//     persist(
+//         (set, get) => ({
+//             products: [], // Mảng sản phẩm sẽ được lấy từ Firestore
+//             cart: [],
+//             favorites: [],
+
+//             // Fetch products from Firestore when the store is initialized
+//             fetchProducts: async () => {
+//                 const products = await getProductsFromFirestore();
+//                 set({ products });
+//             },
+
+//             addToCart: async (userId, productId, quantity = 1) => {
+//                 // Lấy giỏ hàng từ Firestore
+//                 await addToCartInFirestore(userId, productId, quantity);
+
+//                 // Cập nhật lại giỏ hàng trong store
+//                 const newCart = [...get().cart, { productId, quantity }];
+//                 set({ cart: newCart });
+//             },
+
+//             removeFromCart: (productId) =>
+//                 set((state) => ({
+//                     cart: state.cart.filter((item) => item.productId !== productId),
+//                 })),
+
+//             updateCartItemQuantity: (productId, quantity) =>
+//                 set((state) => ({
+//                     cart: state.cart.map((item) =>
+//                         item.productId === productId
+//                             ? { ...item, quantity: Math.max(1, quantity) }
+//                             : item
+//                     ),
+//                 })),
+
+//             clearCart: () => set({ cart: [] }),
+
+//             getCartItems: () => {
+//                 const { products, cart } = get();
+//                 return cart
+//                     .map((item) => ({
+//                         product: products.find((p) => p.id === item.productId)!,
+//                         quantity: item.quantity,
+//                     }))
+//                     .filter((item) => item.product);
+//             },
+
+//             getCartTotal: () => {
+//                 const cartItems = get().getCartItems();
+//                 return cartItems.reduce(
+//                     (total, item) => total + item.product.price * item.quantity,
+//                     0
+//                 );
+//             },
+
+//             getFavoriteProducts: () => {
+//                 const { products, favorites } = get();
+//                 return products.filter((product) => favorites.includes(product.id));
+//             },
+
+//             getProductsByCategory: (category) => {
+//                 return get().products.filter((product) => product.category === category);
+//             },
+
+//             getProductById: (id) => {
+//                 return get().products.find((product) => product.id === id);
+//             },
+
+//             getProductsBySearch: (query) => {
+//                 const searchTerm = query.toLowerCase().trim();
+//                 return get().products.filter(
+//                     (product) =>
+//                         product.name.toLowerCase().includes(searchTerm) ||
+//                         product.description.toLowerCase().includes(searchTerm) ||
+//                         product.category.toLowerCase().includes(searchTerm)
+//                 );
+//             },
+//         }),
+//         {
+//             name: 'shop-storage',
+//             storage: createJSONStorage(() => AsyncStorage),
+//         }
+//     )
+// );

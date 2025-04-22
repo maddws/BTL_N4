@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useShopStore } from '@/store/shop-store';
 
 import type { UserDoc } from '@/types/pet';
 
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<UserDoc | null>(null);
     const [loading, setLoading] = useState(true);
+    const { resetCart } = useShopStore();
 
     // Khi app mount, đọc lại user từ AsyncStorage
     useEffect(() => {
@@ -50,6 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await AsyncStorage.removeItem('user');
             setUser(null);
+            resetCart();
         } catch (e) {
             console.error('Failed to remove user from storage', e);
         }

@@ -76,7 +76,7 @@ export default function SearchScreen() {
                             product={item}
                             onPress={() =>
                                 router.push({
-                                    pathname: '/product-details',
+                                    pathname: './product-details',
                                     params: { id: item.id },
                                 })
                             }

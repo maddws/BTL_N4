@@ -6,6 +6,9 @@ import { Search, ShoppingCart } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import ProductItem from '@/components/ProductItem';
 import { useShopStore } from '@/store/shop-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { db } from '@/config/firebase';
+import { addDoc, collection } from 'firebase/firestore';
 
 type Category = 'all' | 'food' | 'toys' | 'accessories' | 'health' | 'grooming';
 
@@ -21,10 +24,26 @@ const categoryLabels: Record<Category, string> = {
 export default function ShopScreen() {
     const [activeCategory, setActiveCategory] = useState<Category>('all');
     const router = useRouter();
-    const { products, getCartItems } = useShopStore();
+    const { products, getCartItems, fetchProducts } = useShopStore();
+    // fetchProducts();
+    // console.log("Fetched")
+    let user_id = '';
+    AsyncStorage.getItem('user').then((user) => {
+        if (user) {
+            user_id = JSON.parse(user).id;
+        }
+    });
 
     const cartItems = getCartItems();
-    const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+    // Kiểm tra xem cartItems có phải là mảng không và có phần tử không
+    // if (!Array.isArray(cartItems)) {
+    //     // console.error('cartItems is not an array:', cartItems);
+
+    //     return 0; // Trả về 0 nếu cartItems không phải là mảng
+    // }
+
+    // const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+    const cartItemCount = 0;
 
     const filteredProducts =
         activeCategory === 'all'

@@ -8,8 +8,14 @@ import { useShopStore } from '@/store/shop-store';
 
 export default function CartScreen() {
     const router = useRouter();
-    const { getCartItems, getCartTotal, updateCartItemQuantity, removeFromCart, clearCart } =
-        useShopStore();
+    const {
+        getCartItems,
+        getCartTotal,
+        saveCart,
+        updateCartItemQuantity,
+        removeFromCart,
+        clearCart,
+    } = useShopStore();
 
     const cartItems = getCartItems();
     const cartTotal = getCartTotal();
@@ -86,6 +92,10 @@ export default function CartScreen() {
     // Format price
     const formatPrice = (price: number) => {
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + 'đ';
+    };
+
+    const handleSaveCart = () => {
+        saveCart();
     };
 
     if (cartItems.length === 0) {
@@ -196,8 +206,18 @@ export default function CartScreen() {
                 </View>
 
                 <TouchableOpacity
+                    style={[
+                        styles.checkoutButton,
+                        { marginBottom: 12, backgroundColor: Colors.success },
+                    ]}
+                    onPress={handleSaveCart}
+                >
+                    <Text style={styles.checkoutText}>Lưu giỏ hàng</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                     style={styles.checkoutButton}
-                    onPress={() => router.push('/checkout')}
+                    onPress={() => router.push('./checkout')}
                 >
                     <Text style={styles.checkoutText}>Thanh toán</Text>
                 </TouchableOpacity>

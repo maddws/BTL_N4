@@ -133,3 +133,13 @@ export interface UserDoc {
     updated_at: FirebaseFirestoreTypes.Timestamp;
     username: string;
 }
+
+export interface Order {
+    id: string;
+    userId: string;
+    productId: string;
+    quantity: number;
+    totalPrice: number;
+    orderDate: string;
+    status: 'pending' | 'shipped' | 'delivered' | 'canceled';
+}

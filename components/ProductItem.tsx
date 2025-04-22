@@ -21,7 +21,7 @@ export default function ProductItem({ product, onPress }: ProductItemProps) {
 
     const handleBuyNow = () => {
         addToCart(product.id);
-        router.push('/cart');
+        router.push('/main/shop/cart');
     };
 
     // Format price

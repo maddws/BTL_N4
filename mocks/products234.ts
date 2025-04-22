@@ -39,7 +39,7 @@ export const products: Product[] = [
         name: 'Thuốc nhỏ gáy trị ve, rận cho chó',
         description: 'Thuốc nhỏ gáy hiệu quả trong việc phòng và trị ve, rận, bọ chét cho chó.',
         price: 180000,
-        imageUrl: 'https://images.unsplash.com/photo-1606591199505-4292458945f2',
+        imageUrl: 'https://plus.unsplash.com/premium_photo-1672163163579-e5d4aedd26af',
         category: 'health',
         rating: 4.9,
         reviews: 92,
@@ -51,7 +51,7 @@ export const products: Product[] = [
         description:
             'Vòng cổ chất liệu da cao cấp, bền đẹp, nhiều kích cỡ phù hợp với mọi giống chó.',
         price: 85000,
-        imageUrl: 'https://images.unsplash.com/photo-1567612529009-ded3e1897d74',
+        imageUrl: 'https://plus.unsplash.com/premium_photo-1740023671679-03decdebf75c',
         category: 'accessories',
         rating: 4.7,
         reviews: 78,
@@ -73,7 +73,7 @@ export const products: Product[] = [
         name: 'Nhà vệ sinh cho mèo',
         description: 'Nhà vệ sinh kín có nắp đậy, giúp khử mùi hiệu quả và dễ dàng vệ sinh.',
         price: 250000,
-        imageUrl: 'https://images.unsplash.com/photo-1555685812-4b8f594e2c56',
+        imageUrl: 'https://images.unsplash.com/photo-1727510153658-643787acb16a',
         category: 'accessories',
         rating: 4.4,
         reviews: 56,
@@ -93,10 +93,10 @@ export const products: Product[] = [
     },
 ];
 
-export const getProductsByCategory = (category: string): Product[] => {
-    return products.filter((product) => product.category === category);
-};
+// export const getProductsByCategory = (category: string): Product[] => {
+//     return products.filter((product) => product.category === category);
+// };
 
-export const getProductById = (id: string): Product | undefined => {
-    return products.find((product) => product.id === id);
-};
+// export const getProductById = (id: string): Product | undefined => {
+//     return products.find((product) => product.id === id);
+// };

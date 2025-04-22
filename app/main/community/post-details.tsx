@@ -260,10 +260,10 @@ export default function PostDetailsScreen() {
                                     </Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                                {/* <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                                     <Share2 size={20} color={Colors.textLight} />
                                     <Text style={styles.actionText}>Chia sẻ</Text>
-                                </TouchableOpacity>
+                                </TouchableOpacity> */}
                             </View>
 
                             <View style={styles.commentsHeader}>

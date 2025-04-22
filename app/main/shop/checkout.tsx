@@ -15,8 +15,11 @@ import { ArrowLeft, CreditCard, MapPin, Truck, Plus, Minus, X } from 'lucide-rea
 import Colors from '@/constants/colors';
 import { useShopStore } from '@/store/shop-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { db } from '@/config/firebase';
+import { Firestore, collection, setDoc, doc } from 'firebase/firestore';
 
 export default function CheckoutScreen() {
+    // ... rest of
     const router = useRouter();
     const { cart, getProductById, updateCartItemQuantity, removeFromCart, clearCart } =
         useShopStore();
@@ -45,7 +48,7 @@ export default function CheckoutScreen() {
         removeFromCart(productId);
     };
 
-    const handlePlaceOrder = () => {
+    const handlePlaceOrder = async () => {
         if (!address.trim()) {
             Alert.alert('Lỗi', 'Vui lòng nhập địa chỉ giao hàng');
             return;
@@ -56,12 +59,37 @@ export default function CheckoutScreen() {
             return;
         }
 
+        try {
+            const orderId = Date.now().toString(); // Generate a unique ID
+            const orderRef = doc(db, 'Orders', orderId);
+            const orderData = {
+                user_id: userProfile?.id,
+                address: address,
+                phone_number: phone,
+                method: paymentMethod,
+                items: cart.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
+                total: subtotal,
+                ship: shippingFee,
+                total_all: total,
+            };
+            await setDoc(orderRef, orderData);
+        } catch {
+            Alert.alert('Lỗi', 'Đặt hàng không thành công. Vui lòng thử lại sau.');
+            return;
+        }
+
         setIsProcessing(true);
 
         // Simulate order processing
         setTimeout(() => {
             setIsProcessing(false);
             clearCart();
+
+            console.log('Order placed successfully');
+
             Alert.alert(
                 'Đặt hàng thành công',
                 'Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đang được xử lý.',
