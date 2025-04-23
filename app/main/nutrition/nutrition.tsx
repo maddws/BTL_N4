@@ -12,7 +12,7 @@ export default function NutritionScreen() {
     const { getActivePet } = usePetStore();
     const activePet = getActivePet();
 
-    const nutritionInfo = activePet ? getNutritionInfoByPetType(activePet.type) : undefined;
+    const nutritionInfo = activePet ? getNutritionInfoByPetType(activePet.species) : undefined;
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>

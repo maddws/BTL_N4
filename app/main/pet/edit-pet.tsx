@@ -18,6 +18,11 @@ import { usePetStore } from '@/store/pet-store';
 import { db } from '@/config/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import DatePicker from '@/components/DatePicker';
+import { Timestamp } from 'firebase/firestore';
+interface FBTimestamp {
+    seconds: number;
+    nanoseconds: number;
+}
 
 type PetType = 'dog' | 'cat' | 'bird' | 'fish' | 'other';
 interface PetTypeOption {
@@ -32,6 +37,13 @@ const petTypes: PetTypeOption[] = [
     { value: 'fish', label: 'Cá' },
     { value: 'other', label: 'Khác' },
 ];
+function toDate(ts: FBTimestamp | number | string): Date {
+    if (typeof ts === 'number' || typeof ts === 'string') {
+        return new Date(ts);
+    }
+    // seconds -> ms, nanoseconds -> fraction of ms
+    return new Date(ts.seconds * 1000 + ts.nanoseconds / 1e6);
+}
 
 export default function EditPetScreen() {
     const router = useRouter();
@@ -57,9 +69,24 @@ export default function EditPetScreen() {
     const [weight, setWeight] = useState(petToEdit ? String(petToEdit.weight) : '');
     const [gender, setGender] = useState<'male' | 'female'>(petToEdit?.gender || 'male');
     const [photo, setPhoto] = useState(petToEdit?.photo || '');
-    const [birthDate, setBirthDate] = useState<Date>(
-        petToEdit?.birthDate ? new Date(petToEdit.birthDate) : new Date()
+    // const [birthDate, setBirthDate] = useState<Date>(
+    //     petToEdit?.birthDate ? new Date(petToEdit.birthDate) : new Date()
+    // );
+    // useEffect(() => {
+    //     if (petToEdit?.birthDate) {
+    //         setBirthDate(new Date(petToEdit.birthDate));
+    //     } else {
+    //         setBirthDate(new Date());
+    //     }
+    // }, [petToEdit]);
+    const [birthDate, setBirthDate] = useState<Date>(() =>
+        toDate(petToEdit?.birthDate ?? Date.now())
     );
+    console.log(petToEdit);
+    // birthDate = new Date(petToEdit?.birthDate || Date.now());
+
+    console.log(birthDate);
+
     const [color, setColor] = useState(petToEdit?.color || '');
     const [chip, setChip] = useState(petToEdit?.microchipId || '');
 
@@ -94,27 +121,27 @@ export default function EditPetScreen() {
         try {
             const petRef = doc(db, 'Pets', petId);
             await updateDoc(petRef, {
-                name,
+                name: name,
                 species: type,
-                breed,
+                breed: breed,
                 age: Number(age),
                 weight: Number(weight),
-                gender,
-                photo,
-                birthDate: birthDate.toISOString(),
-                color,
+                gender: gender,
+                photo: photo || 'https://images.unsplash.com/photo-1601758123927-1c2f3b8e4a0d',
+                birthDate: birthDate.toISOString().split('T')[0],
+                // color,
                 isActive: true,
             });
             updatePet(petId, {
-                name,
+                name: name,
                 species: type,
-                breed,
+                breed: breed,
                 age: Number(age),
                 weight: Number(weight),
-                gender,
-                photo,
-                birthDate: birthDate.toISOString(),
-                color,
+                gender: gender,
+                photo: photo || 'https://images.unsplash.com/photo-1601758123927-1c2f3b8e4a0d',
+                birthDate: birthDate.toISOString().split('T')[0],
+                // color,
                 isActive: true,
             });
             Alert.alert('Thành công', 'Cập nhật thông tin thú cưng thành công', [

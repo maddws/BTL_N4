@@ -24,8 +24,9 @@ const categoryLabels: Record<Category, string> = {
 export default function ShopScreen() {
     const [activeCategory, setActiveCategory] = useState<Category>('all');
     const router = useRouter();
-    const { products, getCartItems, fetchProducts } = useShopStore();
-    // fetchProducts();
+    const { products, getCartItems, fetchByFirstLogin } = useShopStore();
+    fetchByFirstLogin();
+    // // fetchProducts();
     // fetchProducts();
     // console.log("Fetched")
     let user_id = '';
@@ -64,7 +65,17 @@ export default function ShopScreen() {
 
                 <TouchableOpacity
                     style={styles.cartButton}
-                    onPress={() => router.push('/main/shop/cart')}
+                    onPress={() => {
+                        // fetchSavedCart(
+                        //     await AsyncStorage.getItem('user').then((user) => {
+                        //         if (user) {
+                        //             return JSON.parse(user).id;
+                        //         }
+                        //     })
+                        // );
+                        // addDoc(collection(db, 'Cart'), {
+                        router.push('/main/shop/cart');
+                    }}
                 >
                     <ShoppingCart size={24} color={Colors.text} />
                     {cartItemCount > 0 && (

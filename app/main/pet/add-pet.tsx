@@ -86,8 +86,8 @@ export default function AddPetScreen() {
             if (!userId) throw new Error('Không tìm thấy user');
 
             await createPetForUser(userId, {
-                name,
-                breed,
+                name: name,
+                breed: breed,
                 species: type,
                 age: Number(age),
                 weight: Number(weight),

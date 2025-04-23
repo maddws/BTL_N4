@@ -50,10 +50,6 @@ export default function SettingsScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Cài đặt</Text>
-            </View>
-
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Profile Section */}
                 {isLoggedIn && userProfile ? (

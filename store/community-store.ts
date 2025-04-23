@@ -49,7 +49,7 @@ export const useCommunityStore = create<CommunityState>()(
         (set, get) => ({
             posts: [],
             savedPosts: [],
-            resetFeed: () => set({ posts: [] }), // Reset to mock data
+            resetFeed: () => set({ posts: [], savedPosts: [] }), // Reset to mock data
 
             reFetchFeed: async () => {
                 const userId = await AsyncStorage.getItem('user').then((user) => {

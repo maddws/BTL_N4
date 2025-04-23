@@ -72,6 +72,7 @@ interface ShopState {
     nbusy: boolean;
     cart: CartItem[];
     favorites: string[];
+    first_login: boolean;
 
     // Actions
     addToCart: (productId: string, quantity?: number) => void;
@@ -93,6 +94,7 @@ interface ShopState {
     saveCart: () => void;
     fetchSavedCart: (userId: string) => Promise<CartItem[]>;
     resetCart: () => void;
+    fetchByFirstLogin: () => void;
 }
 
 export const useShopStore = create<ShopState>()(
@@ -102,6 +104,18 @@ export const useShopStore = create<ShopState>()(
             cart: [],
             nbusy: false,
             favorites: [],
+            first_login: true,
+
+            fetchByFirstLogin: async () => {
+                if (get().first_login) {
+                    await get().fetchSavedCart(
+                        await AsyncStorage.getItem('user').then((user) => {
+                            return JSON.parse(user ? user : '{}').id;
+                        })
+                    );
+                    set({ first_login: false });
+                }
+            },
 
             // Fetch products from Firestore when the store is initialized
             // saveCart: async () => {
@@ -154,6 +168,7 @@ export const useShopStore = create<ShopState>()(
             fetchSavedCart: async (userId: string) => {
                 try {
                     set({ nbusy: false });
+                    console.log('Fetching saved cart for user:', userId);
                     const cartRef = doc(db, 'Carts', userId); // Tham chiếu đến document của giỏ hàng người dùng
                     const cartSnap = await getDoc(cartRef);
 
@@ -270,6 +285,7 @@ export const useShopStore = create<ShopState>()(
 
             getCartItems: () => {
                 // console.log('hello');
+                // console.log(get().cart); // Updated to use get() to access cart
                 if (get().nbusy == true) {
                     AsyncStorage.getItem('user').then((user) => {
                         if (user) {
