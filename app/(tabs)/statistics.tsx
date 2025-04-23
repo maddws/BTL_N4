@@ -83,41 +83,77 @@ export default function StatisticsScreen() {
     // }, [activePet]);
     // console.log(weightData);
     // console.log(labelData);
+    const fetchWeightData = async (petId) => {
+        try {
+            const weightDataRef = collection(db, 'HealthLogs');
+            const q = query(weightDataRef, where('petId', '==', petId)); // Filter by petId
+            const querySnapshot = await getDocs(q);
+
+            const weightData: number[] = [];
+            const labelData: string[] = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.weight) {
+                    weightData.push(data.weight); // Add weight to array
+                    labelData.push(data.date); // Add date to labels
+                }
+            });
+
+            return { weight: weightData, date: labelData };
+        } catch (error) {
+            console.error('Error fetching weight data:', error);
+            return { weight: [], date: [] };
+        }
+    };
     useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-
         const loadWeightData = async () => {
+            console.log('fetch weight data');
             if (activePet) {
-                // Lắng nghe thay đổi trong Firestore (Real-time updates)
-                const weightDataRef = collection(db, 'HealthLogs');
-                const q = query(weightDataRef, where('petId', '==', activePet.id));
-
-                // Sử dụng onSnapshot để lắng nghe thay đổi
-                unsubscribe = onSnapshot(q, (querySnapshot) => {
-                    const weightData: number[] = [];
-                    const labelData: string[] = [];
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        if (data.weight) {
-                            weightData.push(data.weight); // Thêm cân nặng vào mảng
-                            labelData.push(getDayOfWeek(data.date.split('T')[0]));
-                        }
-                    });
-                    setWeightData(weightData.length > 0 ? weightData.reverse() : [0]); // Cập nhật lại weightData
-                    setLabelData(labelData.length > 0 ? labelData.reverse() : ['20']); // Cập nhật lại labelData
-                });
+                const { weight, date } = await fetchWeightData(activePet.id);
+                setWeightData(weight);
+                setLabelData(date);
             }
         };
-
         loadWeightData();
+    }, [activePet]);
+    // useEffect(() => {
+    //     console.log('useEffect loadWeightData');
+    //     let unsubscribe: (() => void) | undefined;
 
-        // Cleanup when the component is unmounted
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
-    }, [activePet]); // Lắng nghe sự thay đổi của activePet
+    //     const loadWeightData = async () => {
+    //         if (activePet) {
+    //             // Lắng nghe thay đổi trong Firestore (Real-time updates)
+    //             const weightDataRef = collection(db, 'HealthLogs');
+    //             const q = query(weightDataRef, where('petId', '==', activePet.id));
+
+    //             // Sử dụng onSnapshot để lắng nghe thay đổi
+    //             unsubscribe = onSnapshot(q, (querySnapshot) => {
+    //                 const weightData: number[] = [];
+    //                 const labelData: string[] = [];
+    //                 querySnapshot.forEach((doc) => {
+    //                     const data = doc.data();
+    //                     if (data.weight) {
+    //                         weightData.push(data.weight); // Thêm cân nặng vào mảng
+    //                         labelData.push(getDayOfWeek(data.date.split('T')[0]));
+    //                     }
+    //                 });
+    //                 setWeightData(weightData.length > 0 ? weightData.reverse() : [0]); // Cập nhật lại weightData
+    //                 setLabelData(labelData.length > 0 ? labelData.reverse() : ['20']); // Cập nhật lại labelData
+    //             });
+    //             console.log('Data ', weightData);
+    //             console.log('Data ', labelData);
+    //         }
+    //     };
+
+    //     loadWeightData();
+
+    //     // Cleanup when the component is unmounted
+    //     return () => {
+    //         if (unsubscribe) {
+    //             unsubscribe();
+    //         }
+    //     };
+    // }, [activePet]); // Lắng nghe sự thay đổi của activePet
     console.log(weightData);
     console.log(labelData);
 
@@ -154,10 +190,10 @@ export default function StatisticsScreen() {
 
     // Weight data
     const weightDataVisualize = {
-        labels: labelData,
+        labels: labelData.length > 0 ? labelData : ['20'],
         datasets: [
             {
-                data: weightData,
+                data: weightData.length > 0 ? weightData : [0],
             },
         ],
     };
