@@ -17,17 +17,29 @@ export interface Pet {
     photo: string;
 }
 
+// export interface HealthRecord {
+//     id: string;
+//     petId: string;
+//     date: string;
+//     weight: number;
+//     symptoms?: string;
+//     diagnosis?: string;
+//     treatment?: string;
+//     notes?: string;
+//     // vetVisit: boolean;
+//     // vetName?: string;
+// }
 export interface HealthRecord {
     id: string;
     petId: string;
     date: string;
     weight: number;
-    symptoms?: string;
-    diagnosis?: string;
-    treatment?: string;
-    notes?: string;
-    vetVisit: boolean;
-    vetName?: string;
+    symptoms?: string | null; // Allow null instead of undefined
+    diagnosis?: string | null; // Allow null instead of undefined
+    treatment?: string | null; // Allow null instead of undefined
+    notes?: string | null; // Allow null instead of undefined
+    vetVisit?: boolean; // This can be a required field
+    vetName?: string | null; // Vet name can be null if not available
 }
 
 export interface Vaccination {

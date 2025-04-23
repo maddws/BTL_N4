@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,14 +7,119 @@ import { Dimensions } from 'react-native';
 import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
 import { usePetStore } from '@/store/pet-store';
+import { db } from '@/config/firebase';
+import { collection, onSnapshot, query, where, getDocs, doc } from 'firebase/firestore';
 
 type Period = 'day' | 'week' | 'month';
+
+// const fetchWeightData = async (petId: string) => {
+//     try {
+//         const weightDataRef = collection(db, 'HealthLogs');
+//         const q = query(weightDataRef, where('petId', '==', petId)); // Lọc theo petId
+//         const querySnapshot = await getDocs(q);
+
+//         const weightData: number[] = [];
+//         const labelData: string[] = [];
+//         querySnapshot.forEach((doc) => {
+//             const data = doc.data();
+//             if (data.weight) {
+//                 weightData.push(data.weight); // Thêm cân nặng vào mảng
+//                 labelData.push(data.date);
+//             }
+//         });
+
+//         return { weight: weightData, date: labelData };
+//     } catch (error) {
+//         console.error('Error fetching weight data:', error);
+//         return [];
+//     }
+// };
+
+const getDayOfWeek = (dateString: string) => {
+    // Định dạng dateString ví dụ: "DD/MM/YYYY" hoặc "YYYY-MM-DD"
+    let date;
+
+    // Kiểm tra định dạng ngày
+    if (dateString.includes('/')) {
+        const [day, month, year] = dateString.split('/');
+        date = new Date(`${year}-${month}-${day}`);
+    } else if (dateString.includes('-')) {
+        date = new Date(dateString);
+    } else {
+        return 'Định dạng ngày không hợp lệ';
+    }
+
+    // Kiểm tra ngày hợp lệ
+    if (isNaN(date.getTime())) {
+        return 'Ngày không hợp lệ';
+    }
+
+    // Mảng các thứ trong tuần
+    const daysOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    // Lấy thứ từ ngày
+    const dayIndex = date.getDay();
+    return daysOfWeek[dayIndex];
+};
 
 export default function StatisticsScreen() {
     const [activePeriod, setActivePeriod] = useState<Period>('week');
     const router = useRouter();
     const { activePetId, getPetById } = usePetStore();
     const activePet = activePetId ? getPetById(activePetId) : null;
+    const [weightData, setWeightData] = useState<number[]>([]);
+    const [labelData, setLabelData] = useState<string[]>([]);
+
+    // useEffect(() => {
+    //     const loadWeightData = async () => {
+    //         if (activePet) {
+    //             const healthRecords = await fetchWeightData(activePet.id);
+    //             console.log(healthRecords);
+    //             setWeightData(healthRecords.weight);
+    //             setLabelData(healthRecords.date);
+    //         }
+    //     };
+    //     loadWeightData();
+    // }, [activePet]);
+    // console.log(weightData);
+    // console.log(labelData);
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+
+        const loadWeightData = async () => {
+            if (activePet) {
+                // Lắng nghe thay đổi trong Firestore (Real-time updates)
+                const weightDataRef = collection(db, 'HealthLogs');
+                const q = query(weightDataRef, where('petId', '==', activePet.id));
+
+                // Sử dụng onSnapshot để lắng nghe thay đổi
+                unsubscribe = onSnapshot(q, (querySnapshot) => {
+                    const weightData: number[] = [];
+                    const labelData: string[] = [];
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        if (data.weight) {
+                            weightData.push(data.weight); // Thêm cân nặng vào mảng
+                            labelData.push(getDayOfWeek(data.date.split('T')[0]));
+                        }
+                    });
+                    setWeightData(weightData.length > 0 ? weightData.reverse() : [0]); // Cập nhật lại weightData
+                    setLabelData(labelData.length > 0 ? labelData.reverse() : ['20']); // Cập nhật lại labelData
+                });
+            }
+        };
+
+        loadWeightData();
+
+        // Cleanup when the component is unmounted
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, [activePet]); // Lắng nghe sự thay đổi của activePet
+    console.log(weightData);
+    console.log(labelData);
 
     const screenWidth = Dimensions.get('window').width - 32;
 
@@ -48,11 +153,11 @@ export default function StatisticsScreen() {
     };
 
     // Weight data
-    const weightData = {
-        labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+    const weightDataVisualize = {
+        labels: labelData,
         datasets: [
             {
-                data: [3.5, 3.5, 3.6, 3.6, 3.7, 3.7, 3.8],
+                data: weightData,
             },
         ],
     };
@@ -191,7 +296,7 @@ export default function StatisticsScreen() {
                     <Text style={styles.chartSubtitle}>Theo dõi sự thay đổi cân nặng</Text>
 
                     <LineChart
-                        data={weightData}
+                        data={weightDataVisualize}
                         width={screenWidth - 50}
                         height={200}
                         chartConfig={{
@@ -216,6 +321,8 @@ export default function StatisticsScreen() {
                         data={barData}
                         width={screenWidth - 50}
                         height={220}
+                        yAxisLabel=""
+                        yAxisSuffix=" phút"
                         chartConfig={{
                             ...chartConfig,
                             color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,

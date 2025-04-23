@@ -156,7 +156,7 @@ export const useShopStore = create<ShopState>()(
                         // Thêm giỏ hàng mới vào Firestore
                         await setDoc(cartRef, { items: cartItems });
 
-                        Alert.alert('Cart saved successfully!'); // Thông báo thành công
+                        Alert.alert('Lưu giỏ hàng thành công!!'); // Thông báo thành công
                     } catch (error) {
                         console.error('Error saving cart:', error);
                         Alert.alert('Error saving cart. Please try again later.'); // Thông báo lỗi

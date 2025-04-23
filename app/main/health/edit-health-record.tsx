@@ -58,10 +58,12 @@ export default function EditHealthRecordScreen() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!validateForm() || !record) return;
 
-        updateHealthRecord(record.id, {
+        // Cập nhật bản ghi sức khoẻ trong Firestore
+        await updateHealthRecord(record.id, {
+            petId: record.petId,
             date: date.toISOString().split('T')[0],
             weight: Number(weight),
             symptoms: symptoms.trim() || undefined,
@@ -72,8 +74,24 @@ export default function EditHealthRecordScreen() {
             vetName: vetVisit ? vetName : undefined,
         });
 
-        router.back();
+        router.back(); // Quay lại màn hình trước
     };
+    // const handleSubmit = () => {
+    //     if (!validateForm() || !record) return;
+
+    //     updateHealthRecord(record.id, {
+    //         date: date.toISOString().split('T')[0],
+    //         weight: Number(weight),
+    //         symptoms: symptoms.trim() || undefined,
+    //         diagnosis: diagnosis.trim() || undefined,
+    //         treatment: treatment.trim() || undefined,
+    //         notes: notes.trim() || undefined,
+    //         vetVisit,
+    //         vetName: vetVisit ? vetName : undefined,
+    //     });
+
+    //     router.back();
+    // };
 
     if (!record || !pet) {
         return (

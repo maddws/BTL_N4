@@ -43,10 +43,29 @@ export default function AddHealthRecordScreen() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
+    // const handleSubmit = () => {
+    //     if (!validateForm() || !activePet) return;
+    //     console.log('Submitting health record...');
+
+    //     addHealthRecord({
+    //         petId: activePet.id,
+    //         date: date.toISOString().split('T')[0],
+    //         weight: Number(weight),
+    //         symptoms: symptoms.trim() || undefined,
+    //         diagnosis: diagnosis.trim() || undefined,
+    //         treatment: treatment.trim() || undefined,
+    //         notes: notes.trim() || undefined,
+    //         vetVisit,
+    //         vetName: vetVisit ? vetName : undefined,
+    //     });
+
+    //     router.back();
+    // };
+    const handleSubmit = async () => {
         if (!validateForm() || !activePet) return;
 
-        addHealthRecord({
+        // Lấy dữ liệu từ form và gọi phương thức thêm bản ghi sức khoẻ vào Firestore
+        await addHealthRecord({
             petId: activePet.id,
             date: date.toISOString().split('T')[0],
             weight: Number(weight),
@@ -58,7 +77,7 @@ export default function AddHealthRecordScreen() {
             vetName: vetVisit ? vetName : undefined,
         });
 
-        router.back();
+        router.back(); // Quay lại màn hình trước
     };
 
     if (!activePet) {

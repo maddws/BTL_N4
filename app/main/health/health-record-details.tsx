@@ -21,7 +21,7 @@ export default function HealthRecordDetailsScreen() {
 
     const handleEdit = () => {
         router.push({
-            pathname: '/edit-health-record',
+            pathname: './edit-health-record',
             params: { id: record?.id },
         });
     };
@@ -36,7 +36,7 @@ export default function HealthRecordDetailsScreen() {
                 text: 'Xóa',
                 onPress: () => {
                     if (record) {
-                        deleteHealthRecord(record.id);
+                        deleteHealthRecord(record.id, pet.id);
                         router.back();
                     }
                 },
