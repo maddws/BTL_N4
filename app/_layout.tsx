@@ -58,26 +58,25 @@ export default function RootLayout() {
     // };
     // }, []);
 
-
     if (!loaded) return null;
 
     return (
         <ErrorBoundary>
-        <AuthProvider>
-            <AuthGuard>
-            <RootLayoutNav />
-            </AuthGuard>
-        </AuthProvider>
+            <AuthProvider>
+                <AuthGuard>
+                    <RootLayoutNav />
+                </AuthGuard>
+            </AuthProvider>
         </ErrorBoundary>
     );
 }
 
 function RootLayoutNav() {
-  return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="modal"  options={{ presentation: 'modal' }} />
-      {/* nhóm (auth) sẽ tự có header mặc định */}
-    </Stack>
-  );
+    return (
+        <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            {/* nhóm (auth) sẽ tự có header mặc định */}
+        </Stack>
+    );
 }

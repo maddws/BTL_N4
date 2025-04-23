@@ -5,29 +5,27 @@
 // // import '@react-native-firebase/firestore';
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore }  from 'firebase/firestore';
-import { getAuth }       from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // const firebaseConfig = { /* your config */ };
 const firebaseConfig = {
-  apiKey: 'AIzaSyC01AUrFvV90eFLOo86k3MVOHU0CN8YODI',
-  authDomain: 'petcare-db.firebaseapp.com',
-  projectId: 'petcare-db',
-  storageBucket: 'petcare-db.firebasestorage.app',
-  messagingSenderId: '550103698081',
-  appId: '1:550103698081:android:bf707eb52b54c8638a3ee0',
-  databaseURL:
-    'https://petcare-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    apiKey: 'AIzaSyC01AUrFvV90eFLOo86k3MVOHU0CN8YODI',
+    authDomain: 'petcare-db.firebaseapp.com',
+    projectId: 'petcare-db',
+    storageBucket: 'petcare-db.firebasestorage.app',
+    messagingSenderId: '550103698081',
+    appId: '1:550103698081:android:bf707eb52b54c8638a3ee0',
+    databaseURL: 'https://petcare-db-default-rtdb.asia-southeast1.firebasedatabase.app',
 };
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 const auth = getAuth(app);
 
 export { app, db, auth };
 // import { initializeApp } from 'firebase/app';
 // import { getFirestore }  from 'firebase/firestore';
 // import { getAuth }       from 'firebase/auth';
-
 
 // // // ⚠️  Với build native bạn *có thể* bỏ hẳn firebaseConfig.
 // // //     Nhưng nếu còn chạy Web/Expo Go hoặc cần đa‑app thì giữ lại.
@@ -50,7 +48,6 @@ export { app, db, auth };
 // // // 👉 Export tuỳ mục đích
 // // export { app, auth, db };
 // // export default firebase;
-
 
 // src/config/firebase.ts
 // Sử dụng Firebase Web SDK với persistence cho React Native (Expo Go)
