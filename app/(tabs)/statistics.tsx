@@ -95,7 +95,7 @@ export default function StatisticsScreen() {
                 const data = doc.data();
                 if (data.weight) {
                     weightData.push(data.weight); // Add weight to array
-                    labelData.push(data.date); // Add date to labels
+                    labelData.push(getDayOfWeek(data.date.split('T')[0])); // Add date to labels
                 }
             });
 

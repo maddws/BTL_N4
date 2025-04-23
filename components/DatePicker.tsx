@@ -264,10 +264,16 @@ export default function DatePicker({
             {showCalendar && (
                 <View style={styles.calendarWrapper}>
                     <Calendar
+                        // onDayPress={(day) => {
+                        //     setShowCalendar(false);
+                        //     const [y, m, d] = day.dateString.split('-').map(Number);
+                        //     onChange(new Date(y, m - 1, d));
+                        // }}
                         onDayPress={(day) => {
                             setShowCalendar(false);
                             const [y, m, d] = day.dateString.split('-').map(Number);
-                            onChange(new Date(y, m - 1, d));
+                            // Sử dụng UTC để đảm bảo không bị lệch múi giờ
+                            onChange(new Date(Date.UTC(y, m - 1, d)));
                         }}
                         markedDates={{
                             [formatted]: { selected: true },
