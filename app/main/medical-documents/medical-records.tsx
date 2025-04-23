@@ -71,7 +71,7 @@ export default function MedicalRecordsScreen() {
                                 </View>
                                 <TouchableOpacity
                                     style={styles.addButton}
-                                    onPress={() => router.push('./add-health-record')}
+                                    onPress={() => router.push('/main/health/add-health-record')}
                                 >
                                     <Plus size={16} color={Colors.card} />
                                 </TouchableOpacity>
@@ -129,7 +129,7 @@ export default function MedicalRecordsScreen() {
                             {healthRecords.length > 3 && (
                                 <TouchableOpacity
                                     style={styles.viewAllButton}
-                                    onPress={() => router.push('./health')}
+                                    onPress={() => router.push('/main/health/health')}
                                 >
                                     <Text style={styles.viewAllText}>Xem tất cả</Text>
                                 </TouchableOpacity>
@@ -144,7 +144,7 @@ export default function MedicalRecordsScreen() {
                                 </View>
                                 <TouchableOpacity
                                     style={styles.addButton}
-                                    onPress={() => router.push('./add-vaccination')}
+                                    onPress={() => router.push('/main/vaccination/add-vaccination')}
                                 >
                                     <Plus size={16} color={Colors.card} />
                                 </TouchableOpacity>
