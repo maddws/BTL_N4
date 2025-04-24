@@ -81,7 +81,7 @@ export interface Reminder {
 export interface Activity {
     id: string;
     petId: string;
-    type: 'walk' | 'play' | 'rest' | 'eat' | 'other';
+    type: 'walk' | 'play' | 'rest' | 'eat' | 'other' | 'run';
     duration?: number; // in minutes
     distance?: number; // in meters
     date: string;

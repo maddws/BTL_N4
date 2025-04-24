@@ -12,6 +12,7 @@ import {
     Apple,
     Stethoscope,
     FileText,
+    HeartPulse,
     ChevronRight,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -55,9 +56,15 @@ export default function HomeScreen() {
                     {/* Main Features */}
                     <HomeCard
                         title="Theo dõi sức khỏe"
-                        icon={<Activity size={20} color={Colors.primary} />}
+                        icon={<HeartPulse size={20} color={Colors.primary} />}
                         description="Ghi lại các chỉ số sức khỏe của thú cưng"
                         onPress={() => router.push('/main/health/health')}
+                    />
+                    <HomeCard
+                        title="Lịch sử hoạt động"
+                        icon={<Activity size={20} color={Colors.primary} />}
+                        description="Ghi lại lịch sử hoạt động của thú cưng"
+                        onPress={() => router.push('/main/activity/activity')}
                     />
 
                     <HomeCard

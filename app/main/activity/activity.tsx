@@ -8,21 +8,30 @@ import PetSelector from '@/components/PetSelector';
 import { usePetStore } from '@/store/pet-store';
 import { db } from '@/config/firebase';
 import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
-import { HealthRecord } from '@/types/pet';
+import { Activity as ActivityLog } from '@/types/pet';
+
+const actTypes: any[] = [
+    { value: 'walk', label: 'Đi dạo' },
+    { value: 'run', label: 'Chạy nhảy ' },
+    { value: 'play', label: 'Tương tác' },
+    { value: 'eat', label: 'Ăn' },
+    { value: 'sleep', label: 'Ngủ' },
+];
+const formatTime = (timestamp: { seconds: number; nanoseconds: number }) => {
+    // Chuyển đổi Firestore timestamp (seconds + nanoseconds) thành đối tượng Date
+    if (!timestamp || !timestamp.seconds) {
+        return '0 phút trước'; // Trả về giá trị mặc định nếu timestamp không hợp lệ
+    }
+    const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000); // nanoseconds / 1000000 để chuyển đổi nanoseconds thành milliseconds
+    return date.toLocaleDateString('vi-VN');
+};
 
 export default function HealthScreen() {
     const router = useRouter();
     const { getActivePet, getPetHealthRecords, setHealthRecords } = usePetStore();
-    const [healthRecords, setHealthRecord] = useState<HealthRecord[]>([]);
-    // getPetHealthRecords()
+    const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
 
     const activePet = getActivePet();
-    // setHealthRecord(activePet ? getPetHealthRecords(activePet.id) : []);
-    // setHealthRecord(activePet ? getPetHealthRecords(activePet.id) : []);
-
-    // const [healthRecords, setHealthRecord] = useState<HealthRecord[]>([]);
-
-    // const activePet = getActivePet();
 
     useEffect(() => {
         if (!activePet?.id) return;
@@ -30,20 +39,19 @@ export default function HealthScreen() {
         console.log('activePet', activePet.id);
 
         // Listen for changes in the health records collection for the specific pet
-        const healthRef = collection(db, 'HealthLogs');
-        const q = query(healthRef, where('petId', '==', activePet.id)); // Filter by petId
+        const activityRef = collection(db, 'ActivityLogs');
+        const q = query(activityRef, where('petId', '==', activePet.id)); // Filter by petId
 
         const unsub = onSnapshot(q, (querySnapshot) => {
-            const records: HealthRecord[] = [];
+            const records: ActivityLog[] = [];
             querySnapshot.forEach((doc) => {
-                const data = doc.data() as HealthRecord;
+                const data = doc.data() as ActivityLog;
                 const id = doc.id;
                 records.push({ ...data, id });
             });
 
-            setHealthRecord(records); // Update state with health records
-            setHealthRecords(records); // Update state with health records
             console.log(records);
+            setActivityLog(records);
         });
 
         // Cleanup function to unsubscribe when the component is unmounted
@@ -71,12 +79,12 @@ export default function HealthScreen() {
 
                 {activePet ? (
                     <View style={styles.content}>
-                        <View style={styles.summaryContainer}>
+                        {/* <View style={styles.summaryContainer}>
                             <View style={styles.summaryCard}>
                                 <View style={styles.summaryIconContainer}>
                                     <Weight size={20} color={Colors.primary} />
-                                </View>
-                                <Text style={styles.summaryTitle}>Cân nặng</Text>
+                                </View> */}
+                        {/* <Text style={styles.summaryTitle}>Cân nặng</Text>
                                 <Text style={styles.summaryValue}>{activePet.weight} kg</Text>
                             </View>
 
@@ -85,23 +93,23 @@ export default function HealthScreen() {
                                     <Activity size={20} color={Colors.primary} />
                                 </View>
                                 <Text style={styles.summaryTitle}>Tuổi</Text>
-                                <Text style={styles.summaryValue}>{activePet.age} tuổi</Text>
-                            </View>
-                        </View>
+                                <Text style={styles.summaryValue}>{activePet.age} tuổi</Text> */}
+                        {/* </View> */}
+                        {/* </View> */}
 
                         <View style={styles.recordsContainer}>
                             <View style={styles.recordsHeader}>
-                                <Text style={styles.recordsTitle}>Lịch sử khám bệnh</Text>
+                                <Text style={styles.recordsTitle}>Lịch sử hoạt động</Text>
                                 <TouchableOpacity
                                     style={styles.addButton}
-                                    onPress={() => router.push('./add-health-record')}
+                                    onPress={() => router.push('./add-activity-log')}
                                 >
                                     <Plus size={16} color={Colors.card} />
                                 </TouchableOpacity>
                             </View>
 
-                            {healthRecords.length > 0 ? (
-                                healthRecords
+                            {activityLog.length > 0 ? (
+                                activityLog
                                     .sort(
                                         (a, b) =>
                                             new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -112,13 +120,13 @@ export default function HealthScreen() {
                                             style={styles.recordItem}
                                             onPress={() =>
                                                 router.push({
-                                                    pathname: './health-record-details',
+                                                    pathname: './activity-log-details',
                                                     params: { id: record.id },
                                                 })
                                             }
                                         >
                                             <View style={styles.recordIconContainer}>
-                                                {record.vetVisit ? (
+                                                {record.date ? (
                                                     <Stethoscope size={20} color={Colors.primary} />
                                                 ) : (
                                                     <FileText size={20} color={Colors.primary} />
@@ -126,17 +134,21 @@ export default function HealthScreen() {
                                             </View>
                                             <View style={styles.recordContent}>
                                                 <Text style={styles.recordDate}>
-                                                    {formatDate(record.date)}
+                                                    {formatTime(record.date)}
                                                 </Text>
                                                 <Text style={styles.recordWeight}>
-                                                    Cân nặng: {record.weight} kg
+                                                    Loại:{' '}
+                                                    {actTypes.find(
+                                                        (abc) => abc.value === record.activity_name
+                                                    )?.label || ''}
                                                 </Text>
-                                                {record.diagnosis && (
+                                                {record.end_time && record.start_time && (
                                                     <Text
                                                         style={styles.recordDiagnosis}
                                                         numberOfLines={1}
                                                     >
-                                                        {record.diagnosis}
+                                                        Bắt đầu : {record.start_time} - Kết thúc :
+                                                        {record.end_time}
                                                     </Text>
                                                 )}
                                             </View>
@@ -144,7 +156,7 @@ export default function HealthScreen() {
                                     ))
                             ) : (
                                 <Text style={styles.emptyText}>
-                                    Chưa có dữ liệu sức khỏe. Hãy thêm bản ghi mới.
+                                    Chưa có dữ liệu hoạt động. Hãy thêm bản ghi mới.
                                 </Text>
                             )}
                         </View>

@@ -28,6 +28,7 @@ export default function AddHealthRecordScreen() {
     const [notes, setNotes] = useState('');
     const [vetVisit, setVetVisit] = useState(false);
     const [vetName, setVetName] = useState('');
+    const [petStatus, setPetStatus] = useState(false);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -131,46 +132,65 @@ export default function AddHealthRecordScreen() {
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Triệu chứng</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            value={symptoms}
-                            onChangeText={setSymptoms}
-                            placeholder="Nhập các triệu chứng"
-                            placeholderTextColor={Colors.textLight}
-                            multiline
-                            numberOfLines={3}
-                            textAlignVertical="top"
-                        />
+                        <View style={styles.switchContainer}>
+                            <Text style={styles.label}>Thêm tình trạng</Text>
+                            <Switch
+                                value={petStatus}
+                                onValueChange={setPetStatus}
+                                trackColor={{
+                                    false: Colors.border,
+                                    true: Colors.primary + '80',
+                                }}
+                                thumbColor={petStatus ? Colors.primary : Colors.card}
+                            />
+                        </View>
                     </View>
 
-                    <View style={styles.formGroup}>
-                        <Text style={styles.label}>Chẩn đoán</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            value={diagnosis}
-                            onChangeText={setDiagnosis}
-                            placeholder="Nhập chẩn đoán"
-                            placeholderTextColor={Colors.textLight}
-                            multiline
-                            numberOfLines={3}
-                            textAlignVertical="top"
-                        />
-                    </View>
+                    {petStatus && (
+                        <>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Triệu chứng</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={symptoms}
+                                    onChangeText={setSymptoms}
+                                    placeholder="Nhập các triệu chứng"
+                                    placeholderTextColor={Colors.textLight}
+                                    multiline
+                                    numberOfLines={3}
+                                    textAlignVertical="top"
+                                />
+                            </View>
 
-                    <View style={styles.formGroup}>
-                        <Text style={styles.label}>Điều trị</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            value={treatment}
-                            onChangeText={setTreatment}
-                            placeholder="Nhập phương pháp điều trị"
-                            placeholderTextColor={Colors.textLight}
-                            multiline
-                            numberOfLines={3}
-                            textAlignVertical="top"
-                        />
-                    </View>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Chẩn đoán</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={diagnosis}
+                                    onChangeText={setDiagnosis}
+                                    placeholder="Nhập chẩn đoán"
+                                    placeholderTextColor={Colors.textLight}
+                                    multiline
+                                    numberOfLines={3}
+                                    textAlignVertical="top"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Điều trị</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={treatment}
+                                    onChangeText={setTreatment}
+                                    placeholder="Nhập phương pháp điều trị"
+                                    placeholderTextColor={Colors.textLight}
+                                    multiline
+                                    numberOfLines={3}
+                                    textAlignVertical="top"
+                                />
+                            </View>
+                        </>
+                    )}
 
                     <View style={styles.formGroup}>
                         <View style={styles.switchContainer}>

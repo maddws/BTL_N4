@@ -101,49 +101,6 @@ export default function CreatePostScreen() {
         setImages(newImages);
     };
 
-    // const handleSubmit = () => {
-    //     if (!content.trim()) {
-    //         Alert.alert('Lỗi', 'Vui lòng nhập nội dung bài viết');
-    //         return;
-    //     }
-
-    //     if (!userProfile) {
-    //         Alert.alert('Lỗi', 'Vui lòng đăng nhập để đăng bài');
-    //         return;
-    //     }
-
-    //     setIsSubmitting(true);
-
-    //     // Create new post
-    //     const newPost = {
-    //         id: Date.now().toString(),
-    //         author: {
-    //             id: 'user1',
-    //             name: userProfile.name,
-    //             avatar:
-    //                 userProfile.avatar ||
-    //                 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-    //         },
-    //         content: content,
-    //         images: images.length > 0 ? images : undefined,
-    //         likes: 0,
-    //         comments: 0,
-    //         createdAt: new Date().toISOString(),
-    //         isLiked: false,
-    //         isSaved: false,
-    //     };
-
-    //     // Add post to store
-    //     addPost(newPost);
-
-    //     // Navigate back to community screen
-    //     Alert.alert('Thành công', 'Bài viết của bạn đã được đăng', [
-    //         {
-    //             text: 'OK',
-    //             onPress: () => router.push('/(tabs)/community'),
-    //         },
-    //     ]);
-    // };
     const handleSubmit = async () => {
         if (!content.trim()) {
             Alert.alert('Lỗi', 'Vui lòng nhập nội dung bài viết');
