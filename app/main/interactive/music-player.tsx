@@ -146,7 +146,7 @@ export default function MusicPlayerScreen() {
             />
 
             <View style={styles.content}>
-                <View style={styles.playerContainer}>
+                <View style={[styles.playerContainer, {height: 400}]}>
                     <Image source={{ uri: currentTrack.imageUrl }} style={styles.albumArt} />
 
                     <View style={styles.trackInfo}>
@@ -156,7 +156,7 @@ export default function MusicPlayerScreen() {
 
                     <View style={styles.progressContainer}>
                         <View style={styles.progressBar}>
-                            <View style={[styles.progress, { width: '45%' }]} />
+                            <View style={[styles.progress, { width: '30%' }]} />
                         </View>
                         <View style={styles.timeInfo}>
                             <Text style={styles.timeText}>1:21</Text>
@@ -164,7 +164,7 @@ export default function MusicPlayerScreen() {
                         </View>
                     </View>
 
-                    <View style={styles.controls}>
+                    <View style={[styles.controls, { marginTop: -32 }]}>
                         <TouchableOpacity style={styles.controlButton} onPress={prevTrack}>
                             <SkipBack size={24} color={Colors.text} />
                         </TouchableOpacity>
