@@ -43,11 +43,6 @@ export default function ShopScreen() {
         cartItems: getCartItems,
     } = useShopStore();
 
-    const filteredProducts =
-        activeCategory === 'all'
-            ? products
-            : products.filter((product) => product.category === activeCategory);
-
     // realtime subscribe once
     useEffect(() => {
         const unsub1 = subscribeProducts();
@@ -64,6 +59,11 @@ export default function ShopScreen() {
             if (u) useShopStore.getState().setUser(JSON.parse(u).id);
         });
     }, []);
+
+    const filteredProducts =
+        activeCategory === 'all'
+            ? products
+            : products.filter((product) => product.category === activeCategory);
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>

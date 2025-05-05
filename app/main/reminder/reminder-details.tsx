@@ -51,7 +51,7 @@ export default function ReminderDetailsScreen() {
 
     const handleEdit = () => {
         router.push({
-            pathname: '/edit-reminder',
+            pathname: './edit-reminder',
             params: { id: reminder?.id },
         });
     };
@@ -177,14 +177,14 @@ export default function ReminderDetailsScreen() {
                                     {reminder.type === 'feeding'
                                         ? '🍽️'
                                         : reminder.type === 'medication'
-                                          ? '💊'
-                                          : reminder.type === 'grooming'
-                                            ? '✂️'
-                                            : reminder.type === 'exercise'
-                                              ? '🏃'
-                                              : reminder.type === 'vet'
-                                                ? '🏥'
-                                                : '📝'}
+                                        ? '💊'
+                                        : reminder.type === 'grooming'
+                                        ? '✂️'
+                                        : reminder.type === 'exercise'
+                                        ? '🏃'
+                                        : reminder.type === 'vet'
+                                        ? '🏥'
+                                        : '📝'}
                                 </Text>
                             </View>
                             <View>
