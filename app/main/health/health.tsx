@@ -27,7 +27,7 @@ export default function HealthScreen() {
     useEffect(() => {
         if (!activePet?.id) return;
 
-        console.log('activePet', activePet.id);
+        // console.log('activePet', activePet.id);
 
         // Listen for changes in the health records collection for the specific pet
         const healthRef = collection(db, 'HealthLogs');
@@ -71,7 +71,7 @@ export default function HealthScreen() {
 
                 {activePet ? (
                     <View style={styles.content}>
-                        <View style={styles.summaryContainer}>
+                        {/* <View style={styles.summaryContainer}>
                             <View style={styles.summaryCard}>
                                 <View style={styles.summaryIconContainer}>
                                     <Weight size={20} color={Colors.primary} />
@@ -87,7 +87,7 @@ export default function HealthScreen() {
                                 <Text style={styles.summaryTitle}>Tuổi</Text>
                                 <Text style={styles.summaryValue}>{activePet.age} tuổi</Text>
                             </View>
-                        </View>
+                        </View> */}
 
                         <View style={styles.recordsContainer}>
                             <View style={styles.recordsHeader}>

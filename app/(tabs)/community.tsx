@@ -1,5 +1,5 @@
 // CommunityScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -20,151 +20,163 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 type Tab = 'feed' | 'chat' | 'saved';
-
-// **CHANGE THIS** to your actual doctor UID
 const DOCTOR_ID = 'U3J9nEV500hMEr5iC6mX';
 
 export default function CommunityScreen() {
+    const router = useRouter();
+    const user = useSettingsStore((s) => s.userProfile);
+    const posts = useCommunityStore((s) => s.posts);
+    const loading = useCommunityStore((s) => s.loading);
+    const subscribeFeed = useCommunityStore((s) => s.subscribeFeed);
+    const clearPosts = useCommunityStore((s) => s.resetFeed);
+
     const [activeTab, setActiveTab] = useState<Tab>('feed');
     const [peers, setPeers] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const router = useRouter();
-    const { posts, reFetchFeed } = useCommunityStore();
-    const { userProfile } = useSettingsStore(); // expects { id: string, ... }
-    // reFetchFeed();
+    const [chatLoading, setChatLoading] = useState(false);
 
-    // load list of chat‑peers whenever we switch to "chat"
+    // Feed: subscribe once on mount
     useEffect(() => {
-        if (activeTab !== 'chat' || !userProfile?.id) {
+        const unsub = subscribeFeed();
+        return () => unsub();
+    }, [subscribeFeed]);
+
+    // Chat: load peers when tab changes
+    useEffect(() => {
+        if (activeTab !== 'chat' || !user?.id) {
             setPeers([]);
             return;
         }
-        setLoading(true);
+        setChatLoading(true);
         getDocs(collection(db, 'Users'))
             .then((snap) => {
-                const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-                if (userProfile.id !== DOCTOR_ID) {
-                    // patient: only show the doctor
+                const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+                if (user.id !== DOCTOR_ID) {
                     setPeers(all.filter((u) => u.id === DOCTOR_ID));
                 } else {
-                    // doctor: show everyone except themselves
                     setPeers(all.filter((u) => u.id !== DOCTOR_ID));
                 }
             })
-            .finally(() => setLoading(false));
-    }, [activeTab, userProfile]);
+            .finally(() => setChatLoading(false));
+    }, [activeTab, user]);
 
-    const renderFeed = () => (
-        <>
-            <View style={styles.createPostContainer}>
-                <TouchableOpacity
-                    style={styles.createPostButton}
-                    onPress={() => router.push('/main/community/create-post')}
-                >
-                    <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
-                    <Plus size={20} color={Colors.primary} />
-                </TouchableOpacity>
+    const renderFeed = useCallback(
+        () => (
+            <>
+                <View style={styles.createPostContainer}>
+                    <TouchableOpacity
+                        style={styles.createPostButton}
+                        onPress={() => router.push('/main/community/create-post')}
+                    >
+                        <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
+                        <Plus size={20} color={Colors.primary} />
+                    </TouchableOpacity>
+                </View>
+                {loading ? (
+                    <ActivityIndicator style={{ marginTop: 20 }} />
+                ) : (
+                    <ScrollView
+                        style={styles.content}
+                        contentContainerStyle={styles.contentContainer}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {posts.map((p) => (
+                            <PostItem
+                                key={p.id}
+                                post={p}
+                                onPress={() =>
+                                    router.push({
+                                        pathname: '/main/community/post-details',
+                                        params: { id: p.id },
+                                    })
+                                }
+                            />
+                        ))}
+                    </ScrollView>
+                )}
+            </>
+        ),
+        [loading, posts]
+    );
+
+    const renderChat = useCallback(
+        () => (
+            <View style={styles.chatContainer}>
+                <Text style={styles.chatTitle}>Chọn người để chat</Text>
+                {chatLoading ? (
+                    <ActivityIndicator style={{ marginTop: 20 }} />
+                ) : (
+                    peers.map((peer) => (
+                        <TouchableOpacity
+                            key={peer.id}
+                            style={styles.peerItem}
+                            onPress={() =>
+                                router.push({
+                                    pathname: '/main/community/chat',
+                                    params: { peerId: peer.id },
+                                })
+                            }
+                        >
+                            <Image source={{ uri: peer.profile_picture }} style={styles.avatar} />
+                            <View style={styles.info}>
+                                <Text style={styles.name}>{peer.username}</Text>
+                                <Text style={styles.sub}>
+                                    {peer.id === DOCTOR_ID ? 'Bác sĩ' : peer.email}
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.statusDot,
+                                    {
+                                        backgroundColor:
+                                            peer.status === 'online'
+                                                ? Colors.success
+                                                : Colors.textLight,
+                                    },
+                                ]}
+                            />
+                        </TouchableOpacity>
+                    ))
+                )}
             </View>
+        ),
+        [chatLoading, peers]
+    );
+
+    const renderSaved = useCallback(
+        () => (
             <ScrollView
                 style={styles.content}
                 contentContainerStyle={styles.contentContainer}
                 showsVerticalScrollIndicator={false}
             >
-                {posts.map((p) => (
-                    <PostItem
-                        key={p.id}
-                        post={p}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/main/community/post-details',
-                                params: { id: p.id },
-                            })
-                        }
-                    />
-                ))}
-            </ScrollView>
-        </>
-    );
-
-    const renderChatList = () => (
-        <View style={styles.chatContainer}>
-            <Text style={styles.chatTitle}>Chọn người để chat</Text>
-            {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} />
-            ) : (
-                peers.map((peer) => (
-                    <TouchableOpacity
-                        key={peer.id}
-                        style={styles.peerItem}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/main/community/chat',
-                                params: { peerId: peer.id },
-                            })
-                        }
-                    >
-                        <Image source={{ uri: peer.profile_picture }} style={styles.avatar} />
-                        <View style={styles.info}>
-                            <Text style={styles.name}>{peer.username}</Text>
-                            <Text style={styles.sub}>
-                                {peer.id === DOCTOR_ID ? 'Bác sĩ' : peer.email}
-                            </Text>
-                        </View>
-                        <View
-                            style={[
-                                styles.statusDot,
-                                {
-                                    backgroundColor:
-                                        peer.status === 'online'
-                                            ? Colors.success
-                                            : Colors.textLight,
-                                },
-                            ]}
+                {posts
+                    .filter((p) => p.isSaved)
+                    .map((p) => (
+                        <PostItem
+                            key={p.id}
+                            post={p}
+                            onPress={() =>
+                                router.push({
+                                    pathname: '/main/community/post-details',
+                                    params: { id: p.id },
+                                })
+                            }
                         />
-                    </TouchableOpacity>
-                ))
-            )}
-        </View>
-    );
-
-    const renderSaved = () => (
-        <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-        >
-            {posts
-                .filter((p) => p.isSaved) // Lọc các bài viết đã được lưu
-                .map((p) => (
-                    <PostItem
-                        key={p.id}
-                        post={p}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/main/community/post-details',
-                                params: { id: p.id },
-                            })
-                        }
-                    />
-                ))}
-        </ScrollView>
+                    ))}
+            </ScrollView>
+        ),
+        [posts]
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['right', 'left']}>
+        <SafeAreaView style={styles.container}>
             {/* Tabs */}
             <View style={styles.tabContainer}>
                 {(['feed', 'chat', 'saved'] as Tab[]).map((t) => (
                     <TouchableOpacity
                         key={t}
                         style={[styles.tabButton, activeTab === t && styles.activeTabButton]}
-                        onPress={() => {
-                            setActiveTab(t);
-                            if (t === 'feed') {
-                                reFetchFeed();
-                                console.log('re-fetch feed');
-                            }
-                        }}
+                        onPress={() => setActiveTab(t)}
                     >
                         {t === 'feed' && (
                             <Users
@@ -193,11 +205,191 @@ export default function CommunityScreen() {
 
             {/* Content */}
             {activeTab === 'feed' && renderFeed()}
-            {activeTab === 'chat' && renderChatList()}
+            {activeTab === 'chat' && renderChat()}
             {activeTab === 'saved' && renderSaved()}
         </SafeAreaView>
     );
 }
+// type Tab = 'feed' | 'chat' | 'saved';
+
+// **CHANGE THIS** to your actual doctor UID
+// const DOCTOR_ID = 'U3J9nEV500hMEr5iC6mX';
+
+// export default function CommunityScreen() {
+// const [activeTab, setActiveTab] = useState<Tab>('feed');
+// const [peers, setPeers] = useState<any[]>([]);
+// const [loading, setLoading] = useState(false);
+// const router = useRouter();
+// const { posts, reFetchFeed } = useCommunityStore();
+// const { userProfile } = useSettingsStore(); // expects { id: string, ... }
+// // reFetchFeed();
+
+// // load list of chat‑peers whenever we switch to "chat"
+// useEffect(() => {
+//     reFetchFeed();
+//     if (activeTab !== 'chat' || !userProfile?.id) {
+//         setPeers([]);
+//         return;
+//     }
+//     setLoading(true);
+//     getDocs(collection(db, 'Users'))
+//         .then((snap) => {
+//             const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+//             if (userProfile.id !== DOCTOR_ID) {
+//                 // patient: only show the doctor
+//                 setPeers(all.filter((u) => u.id === DOCTOR_ID));
+//             } else {
+//                 // doctor: show everyone except themselves
+//                 setPeers(all.filter((u) => u.id !== DOCTOR_ID));
+//             }
+//         })
+//         .finally(() => setLoading(false));
+// }, [activeTab, userProfile]);
+
+//     const renderFeed = () => (
+//         <>
+//             <View style={styles.createPostContainer}>
+//                 <TouchableOpacity
+//                     style={styles.createPostButton}
+//                     onPress={() => router.push('/main/community/create-post')}
+//                 >
+//                     <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
+//                     <Plus size={20} color={Colors.primary} />
+//                 </TouchableOpacity>
+//             </View>
+//             <ScrollView
+//                 style={styles.content}
+//                 contentContainerStyle={styles.contentContainer}
+//                 showsVerticalScrollIndicator={false}
+//             >
+//                 {posts.map((p) => (
+//                     <PostItem
+//                         key={p.id}
+//                         post={p}
+//                         onPress={() =>
+//                             router.push({
+//                                 pathname: '/main/community/post-details',
+//                                 params: { id: p.id },
+//                             })
+//                         }
+//                     />
+//                 ))}
+//             </ScrollView>
+//         </>
+//     );
+
+//     const renderChatList = () => (
+//         <View style={styles.chatContainer}>
+//             <Text style={styles.chatTitle}>Chọn người để chat</Text>
+//             {loading ? (
+//                 <ActivityIndicator style={{ marginTop: 20 }} />
+//             ) : (
+//                 peers.map((peer) => (
+//                     <TouchableOpacity
+//                         key={peer.id}
+//                         style={styles.peerItem}
+//                         onPress={() =>
+//                             router.push({
+//                                 pathname: '/main/community/chat',
+//                                 params: { peerId: peer.id },
+//                             })
+//                         }
+//                     >
+//                         <Image source={{ uri: peer.profile_picture }} style={styles.avatar} />
+//                         <View style={styles.info}>
+//                             <Text style={styles.name}>{peer.username}</Text>
+//                             <Text style={styles.sub}>
+//                                 {peer.id === DOCTOR_ID ? 'Bác sĩ' : peer.email}
+//                             </Text>
+//                         </View>
+//                         <View
+//                             style={[
+//                                 styles.statusDot,
+//                                 {
+//                                     backgroundColor:
+//                                         peer.status === 'online'
+//                                             ? Colors.success
+//                                             : Colors.textLight,
+//                                 },
+//                             ]}
+//                         />
+//                     </TouchableOpacity>
+//                 ))
+//             )}
+//         </View>
+//     );
+
+//     const renderSaved = () => (
+//         <ScrollView
+//             style={styles.content}
+//             contentContainerStyle={styles.contentContainer}
+//             showsVerticalScrollIndicator={false}
+//         >
+//             {posts
+//                 .filter((p) => p.isSaved) // Lọc các bài viết đã được lưu
+//                 .map((p) => (
+//                     <PostItem
+//                         key={p.id}
+//                         post={p}
+//                         onPress={() =>
+//                             router.push({
+//                                 pathname: '/main/community/post-details',
+//                                 params: { id: p.id },
+//                             })
+//                         }
+//                     />
+//                 ))}
+//         </ScrollView>
+//     );
+
+//     return (
+//         <SafeAreaView style={styles.container} edges={['right', 'left']}>
+//             {/* Tabs */}
+//             <View style={styles.tabContainer}>
+//                 {(['feed', 'chat', 'saved'] as Tab[]).map((t) => (
+//                     <TouchableOpacity
+//                         key={t}
+//                         style={[styles.tabButton, activeTab === t && styles.activeTabButton]}
+//                         onPress={() => {
+//                             setActiveTab(t);
+//                             if (t === 'feed') {
+//                                 reFetchFeed();
+//                                 console.log('re-fetch feed');
+//                             }
+//                         }}
+//                     >
+//                         {t === 'feed' && (
+//                             <Users
+//                                 size={20}
+//                                 color={activeTab === t ? Colors.primary : Colors.textLight}
+//                             />
+//                         )}
+//                         {t === 'chat' && (
+//                             <MessageCircle
+//                                 size={20}
+//                                 color={activeTab === t ? Colors.primary : Colors.textLight}
+//                             />
+//                         )}
+//                         {t === 'saved' && (
+//                             <Bookmark
+//                                 size={20}
+//                                 color={activeTab === t ? Colors.primary : Colors.textLight}
+//                             />
+//                         )}
+//                         <Text style={[styles.tabText, activeTab === t && styles.activeTabText]}>
+//                             {t === 'feed' ? 'Bài viết' : t === 'chat' ? 'Tư vấn' : 'Đã lưu'}
+//                         </Text>
+//                     </TouchableOpacity>
+//                 ))}
+//             </View>
+
+//             {/* Content */}
+//             {activeTab === 'feed' && renderFeed()}
+//             {activeTab === 'chat' && renderChatList()}
+//             {activeTab === 'saved' && renderSaved()}
+//         </SafeAreaView>
+//     );
+// }
 const styles = StyleSheet.create({
     container: {
         flex: 1,

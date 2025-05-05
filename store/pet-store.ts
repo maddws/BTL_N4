@@ -41,9 +41,10 @@ interface PetState {
     reminders: Reminder[];
     activities: Activity[];
     medicalDocuments: MedicalDocument[];
+
     // Actions
     setHealthRecords: (hr: HealthRecord[]) => void;
-    setActivePet: (petId: string) => void;
+    setActivePetId: (petId: string) => void;
     addPet: (pet: Omit<Pet, 'id'>) => void;
     updatePet: (id: string, updates: Partial<Pet>) => void;
     deletePet: (id: string) => void;
@@ -104,7 +105,7 @@ export const usePetStore = create<PetState>()(
                     console.error('Error adding health record:', error);
                 }
             },
-            setActivePet: (petId) => set({ activePetId: petId }),
+            setActivePetId: async (petId) => await set({ activePetId: petId }),
 
             setHealthRecords: (hr) =>
                 set({
@@ -134,13 +135,6 @@ export const usePetStore = create<PetState>()(
                     return { pets: newPets, activePetId: newActive };
                 }),
 
-            // addHealthRecord: (record) =>
-            //     set((state) => ({
-            //         healthRecords: [
-            //             ...state.healthRecords,
-            //             { ...record, id: Date.now().toString() },
-            //         ],
-            //     })),
             addHealthRecord: async (record) => {
                 try {
                     const healthRecordsRef = collection(db, 'HealthLogs');
@@ -173,69 +167,13 @@ export const usePetStore = create<PetState>()(
                     console.error('Error adding health record:', error);
                 }
             },
-            // addHealthRecord: async (record) => {
-            //     try {
-            //         const healthRecordsRef = collection(db, 'HealthLogs');
 
-            //         // Kiểm tra các trường bắt buộc và bỏ qua các trường không có giá trị hợp lệ
-            //         const newRecord = {
-            //             ...record,
-            //             date: new Date(record.date).toISOString(),
-            //             symptoms: record.symptoms?.trim() || null,
-            //             diagnosis: record.diagnosis?.trim() || null,
-            //             treatment: record.treatment?.trim() || null,
-            //             notes: record.notes?.trim() || null,
-            //         } as HealthRecord;
-
-            //         // Thêm vào Firestore nếu tất cả trường hợp cần thiết đã có giá trị
-            //         const docRef = await addDoc(healthRecordsRef, newRecord); // Thêm vào Firestore
-
-            //         // Cập nhật state sau khi thêm vào Firestore
-            //         set((state) => ({
-            //             healthRecords: [...state.healthRecords, { ...newRecord, id: docRef.id }],
-            //         }));
-
-            //         console.log('Health record added successfully');
-            //     } catch (error) {
-            //         console.error('Error adding health record:', error);
-            //     }
-            // },
-
-            // addHealthRecord: async (record) => {
-            //     try {
-            //         const healthRecordsRef = collection(db, 'HealthLogs');
-            //         const newRecord = { ...record, date: new Date(record.date).toISOString() }; // Đảm bảo định dạng ngày chuẩn ISO
-            //         const docRef = await addDoc(healthRecordsRef, newRecord); // Thêm vào Firestore
-            //         set((state) => ({
-            //             healthRecords: [
-            //                 ...state.healthRecords,
-            //                 { id: docRef.id, ...newRecord }, // Thêm bản ghi vào state sau khi thêm vào Firestore
-            //             ],
-            //         }));
-            //         console.log('Health record added successfully');
-            //     } catch (error) {
-            //         console.error('Error adding health record:', error);
-            //     }
-            // },
-            // updateHealthRecord: (id, updates) =>
-            //     set((state) => ({
-            //         healthRecords: state.healthRecords.map((r) =>
-            //             r.id === id ? { ...r, ...updates } : r
-            //         ),
-            //     })),
             updateHealthRecord: async (id, updates) => {
                 try {
                     // Check if petId exists in the updates
                     if (!updates.petId) {
                         throw new Error('Pet ID is required for updating health record');
                     }
-                    // console.log('idwtf', id);
-                    // console.log(updates);
-
-                    // Filter out fields with undefined values from the updates object
-                    // const sanitizedUpdates = Object.fromEntries(
-                    //     Object.entries(updates).filter(([key, value]) => value !== undefined)
-                    // );
 
                     // Get reference to the document in Firestore
                     const recordRef = doc(db, 'HealthLogs', id);
@@ -257,53 +195,6 @@ export const usePetStore = create<PetState>()(
                 }
             },
 
-            // updateHealthRecord: async (id, updates) => {
-            //     try {
-            //         // Check if petId exists in the updates
-            //         if (!updates.petId) {
-            //             throw new Error('Pet ID is required for updating health record');
-            //         }
-
-            //         // Get reference to the document in Firestore
-            //         const recordRef = doc(db, 'HealthLogs', id);
-
-            //         // Update the health record in Firestore
-            //         await updateDoc(recordRef, updates);
-
-            //         // Update the state to reflect the changes
-            //         set((state) => ({
-            //             healthRecords: state.healthRecords.map((r) =>
-            //                 r.id === id ? { ...r, ...updates } : r
-            //             ),
-            //         }));
-
-            //         console.log('Health record updated successfully');
-            //     } catch (error) {
-            //         console.error('Error updating health record:', error);
-            //     }
-            // },
-            // updateHealthRecord: async (id, updates) => {
-            //     try {
-            //         if (!updates.petId) {
-            //             throw new Error('Pet ID is required for updating health record');
-            //         }
-            //         const recordRef = doc(db, 'HealthLogs', id);
-            //         await updateDoc(recordRef, updates); // Cập nhật bản ghi trong Firestore
-            //         set((state) => ({
-            //             healthRecords: state.healthRecords.map((r) =>
-            //                 r.id === id ? { ...r, ...updates } : r
-            //             ),
-            //         }));
-            //         console.log('Health record updated successfully');
-            //     } catch (error) {
-            //         console.error('Error updating health record:', error);
-            //     }
-            // },
-
-            // deleteHealthRecord: (id) =>
-            //     set((state) => ({
-            //         healthRecords: state.healthRecords.filter((r) => r.id !== id),
-            //     })),
             deleteHealthRecord: async (id, petId) => {
                 try {
                     console.log('Deleting ', id, 'Petid', petId);
@@ -425,18 +316,23 @@ export const usePetStore = create<PetState>()(
 
             // Firestore-backed actions
             fetchUserPets: async (userId) => {
+                // console.log(userId);
                 const upSnap = await getDocs(
                     query(collection(db, 'UserPet'), where('user_id', '==', userId))
                 );
+                // console.log(upSnap.docs);
                 const petIds = upSnap.docs.map((d) => d.data().pet_id as string);
                 const pets: Pet[] = [];
                 for (const pid of petIds) {
                     const petDoc = await getDoc(doc(db, 'Pets', pid));
+                    // console.log(petDoc);
                     if (petDoc.exists()) {
                         pets.push({ id: petDoc.id, ...(petDoc.data() as Omit<Pet, 'id'>) });
                     }
                 }
-                set({ pets, activePetId: pets[0]?.id ?? null });
+                set({ pets: pets });
+                // console.log(pets);
+                set({ activePetId: pets[0].id });
             },
 
             createPetForUser: async (userId, petData) => {

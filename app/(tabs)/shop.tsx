@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    FlatList,
+    ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Search, ShoppingCart } from 'lucide-react-native';
@@ -23,34 +31,39 @@ const categoryLabels: Record<Category, string> = {
 
 export default function ShopScreen() {
     const [activeCategory, setActiveCategory] = useState<Category>('all');
+
     const router = useRouter();
-    const { products, getCartItems, fetchByFirstLogin } = useShopStore();
-    fetchByFirstLogin();
-    // // fetchProducts();
-    // fetchProducts();
-    // console.log("Fetched")
-    let user_id = '';
-    AsyncStorage.getItem('user').then((user) => {
-        if (user) {
-            user_id = JSON.parse(user).id;
-        }
-    });
-
-    const cartItems = getCartItems();
-    // Kiểm tra xem cartItems có phải là mảng không và có phần tử không
-    // if (!Array.isArray(cartItems)) {
-    //     // console.error('cartItems is not an array:', cartItems);
-
-    //     return 0; // Trả về 0 nếu cartItems không phải là mảng
-    // }
-
-    // const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-    const cartItemCount = cartItems.length;
+    const {
+        products,
+        loadingProducts,
+        cartItems,
+        cartTotal,
+        subscribeProducts,
+        subscribeRatings,
+        cartItems: getCartItems,
+    } = useShopStore();
 
     const filteredProducts =
         activeCategory === 'all'
             ? products
             : products.filter((product) => product.category === activeCategory);
+
+    // realtime subscribe once
+    useEffect(() => {
+        const unsub1 = subscribeProducts();
+        const unsub2 = subscribeRatings();
+        return () => {
+            unsub1();
+            unsub2();
+        };
+    }, []);
+
+    // load userId & cart
+    useEffect(() => {
+        AsyncStorage.getItem('user').then((u) => {
+            if (u) useShopStore.getState().setUser(JSON.parse(u).id);
+        });
+    }, []);
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>
@@ -66,21 +79,13 @@ export default function ShopScreen() {
                 <TouchableOpacity
                     style={styles.cartButton}
                     onPress={() => {
-                        // fetchSavedCart(
-                        //     await AsyncStorage.getItem('user').then((user) => {
-                        //         if (user) {
-                        //             return JSON.parse(user).id;
-                        //         }
-                        //     })
-                        // );
-                        // addDoc(collection(db, 'Cart'), {
                         router.push('/main/shop/cart');
                     }}
                 >
                     <ShoppingCart size={24} color={Colors.text} />
-                    {cartItemCount > 0 && (
+                    {getCartItems().length > 0 && (
                         <View style={styles.cartBadge}>
-                            <Text style={styles.cartBadgeText}>{cartItemCount}</Text>
+                            <Text style={styles.cartBadgeText}>{getCartItems().length}</Text>
                         </View>
                     )}
                 </TouchableOpacity>
@@ -114,25 +119,33 @@ export default function ShopScreen() {
                 </ScrollView>
             </View>
 
-            <FlatList
-                data={filteredProducts}
-                renderItem={({ item }) => (
-                    <ProductItem
-                        product={item}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/main/shop/product-details',
-                                params: { id: item.id },
-                            })
-                        }
-                    />
-                )}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                columnWrapperStyle={styles.productRow}
-                contentContainerStyle={styles.productList}
-                showsVerticalScrollIndicator={false}
-            />
+            {loadingProducts ? (
+                <ActivityIndicator
+                    size="large"
+                    color={Colors.primary}
+                    style={{ flex: 1, justifyContent: 'center' }}
+                />
+            ) : (
+                <FlatList
+                    data={filteredProducts}
+                    renderItem={({ item }) => (
+                        <ProductItem
+                            product={item}
+                            onPress={() =>
+                                router.push({
+                                    pathname: '/main/shop/product-details',
+                                    params: { id: item.id },
+                                })
+                            }
+                        />
+                    )}
+                    keyExtractor={(v) => v.id}
+                    numColumns={2}
+                    columnWrapperStyle={styles.productRow}
+                    contentContainerStyle={styles.productList}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
         </SafeAreaView>
     );
 }
@@ -150,19 +163,19 @@ const styles = StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between', // Đảm bảo khoảng cách đều giữa các thành phần
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         marginVertical: 12,
     },
     searchBar: {
-        flex: 1, // Chiếm toàn bộ không gian còn lại
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.lightGray,
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        marginRight: 12, // Khoảng cách giữa search bar và nút giỏ hàng
+        marginRight: 12,
     },
     searchPlaceholder: {
         fontSize: 14,
@@ -171,8 +184,8 @@ const styles = StyleSheet.create({
     },
     cartButton: {
         position: 'relative',
-        padding: 8, // Tăng padding để nút giỏ hàng trông cân đối hơn
-        backgroundColor: Colors.lightGray, // Thêm nền để đồng bộ với search bar
+        padding: 8,
+        backgroundColor: Colors.lightGray,
         borderRadius: 8,
     },
     cartBadge: {
@@ -207,7 +220,7 @@ const styles = StyleSheet.create({
         height: 36,
         justifyContent: 'center',
         alignItems: 'center',
-        minWidth: 80, // Ensure minimum width for all buttons
+        minWidth: 80,
     },
     activeCategoryButton: {
         backgroundColor: Colors.primary,

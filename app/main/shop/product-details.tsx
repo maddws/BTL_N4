@@ -96,7 +96,7 @@ export default function ProductDetailsScreen() {
 
                     <View style={styles.ratingContainer}>
                         <Star size={16} color={Colors.warning} fill={Colors.warning} />
-                        <Text style={styles.rating}>{product.rating.toFixed(1)}</Text>
+                        <Text style={styles.rating}>{product.rating}</Text>
                         <Text style={styles.reviews}>({product.reviews} đánh giá)</Text>
                     </View>
 

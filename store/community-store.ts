@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { posts as mockPosts } from '@/mocks/community';
 import { db } from '@/config/firebase';
-import { collection, query, orderBy, getDocs, addDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, addDoc, where, onSnapshot } from 'firebase/firestore';
 
 export interface Author {
     id: string;
@@ -26,6 +26,7 @@ export interface Post {
 interface CommunityState {
     posts: Post[];
     savedPosts: string[];
+    loading: boolean;
 
     // Actions
     addPost: (post: Post) => Promise<void>; // Change to Promise<void> for async
@@ -36,7 +37,7 @@ interface CommunityState {
     unlikePost: (postId: string) => void;
     savePost: (postId: string) => void;
     unsavePost: (postId: string) => void;
-    reFetchFeed: () => void;
+    subscribeFeed: () => () => void; // Subscribe to feed updates
     // fetchCommentPost: (postId: string) => void; // Fetch comments for a specific post
 
     resetFeed: () => void; // Reset to mock data
@@ -49,67 +50,104 @@ export const useCommunityStore = create<CommunityState>()(
         (set, get) => ({
             posts: [],
             savedPosts: [],
+            loading: false,
             resetFeed: () => set({ posts: [], savedPosts: [] }), // Reset to mock data
+            clearPosts: () => set({ posts: [], loading: false }),
 
-            reFetchFeed: async () => {
-                const userId = await AsyncStorage.getItem('user').then((user) => {
-                    return JSON.parse(user ? user : '{}');
+            subscribeFeed: () => {
+                set({ loading: true });
+
+                // Kick off read of current userId once
+                const userPromise = AsyncStorage.getItem('user').then((u) => {
+                    try {
+                        return JSON.parse(u || '{}').id as string;
+                    } catch {
+                        return null;
+                    }
                 });
-                const postDB = collection(db, 'Posts');
-                const q = query(postDB, orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
-                const posts: Post[] = [];
-                for (const doc of querySnapshot.docs) {
-                    const postData = doc.data() as Post;
-                    // get number of cmt
-                    const cmtDB = collection(db, 'Comments');
-                    const q = query(cmtDB, where('postId', '==', doc.id));
-                    const querySnapshotCmt = await getDocs(q);
-                    const commentsCount = querySnapshotCmt.size;
-                    // check if post is liked
-                    const likeDB = collection(db, 'PostLikes');
-                    const qLike = query(
-                        likeDB,
-                        where('user_id', '==', userId.id),
-                        where('post_id', '==', doc.id)
-                    );
-                    const querySnapshotLike = await getDocs(qLike);
-                    if (!querySnapshotLike.empty) {
-                        postData.isLiked = true;
-                    } else {
-                        postData.isLiked = false;
-                    }
-                    // check if post is saved
-                    const saveDB = collection(db, 'SavedPosts');
-                    const qSave = query(
-                        saveDB,
-                        where('post_id', '==', doc.id),
-                        where('user_id', '==', userId.id)
-                    );
-                    const querySnapshotSave = await getDocs(qSave);
-                    if (!querySnapshotSave.empty) {
-                        postData.isSaved = true;
-                    } else {
-                        postData.isSaved = false;
-                    }
-                    // check number of likes
-                    const likeCountDB = collection(db, 'PostLikes');
-                    const qLikeCount = query(likeCountDB, where('post_id', '==', doc.id));
-                    const querySnapshotLikeCount = await getDocs(qLikeCount);
-                    const likesCount = querySnapshotLikeCount.size;
 
-                    posts.push({
-                        ...postData,
-                        id: doc.id,
-                        comments: commentsCount,
-                        likes: likesCount,
-                    });
-                    console.log('Post:', postData);
-                }
-                // console.log(posts);
-                set({ posts });
+                const postsRef = collection(db, 'Posts');
+                const q = query(postsRef, orderBy('createdAt', 'desc'));
+
+                // Start listening
+                const unsub = onSnapshot(
+                    q,
+                    async (snapshot) => {
+                        const userId = await userPromise;
+
+                        // For each doc in this snapshot, build a Promise<Post>
+                        const pPromises = snapshot.docs.map(async (docSnap) => {
+                            const d = docSnap.data() as any;
+
+                            // convert Firestore Timestamp → JS Date
+                            const createdAt =
+                                typeof d.createdAt?.toDate === 'function'
+                                    ? d.createdAt.toDate()
+                                    : new Date();
+
+                            // prepare parallel queries
+                            const commentsCountP = getDocs(
+                                query(collection(db, 'Comments'), where('postId', '==', docSnap.id))
+                            ).then((s) => s.size);
+
+                            const likesCountP = getDocs(
+                                query(
+                                    collection(db, 'PostLikes'),
+                                    where('post_id', '==', docSnap.id)
+                                )
+                            ).then((s) => s.size);
+
+                            const isLikedP = userId
+                                ? getDocs(
+                                      query(
+                                          collection(db, 'PostLikes'),
+                                          where('post_id', '==', docSnap.id),
+                                          where('user_id', '==', userId)
+                                      )
+                                  ).then((s) => !s.empty)
+                                : Promise.resolve(false);
+
+                            const isSavedP = userId
+                                ? getDocs(
+                                      query(
+                                          collection(db, 'SavedPosts'),
+                                          where('post_id', '==', docSnap.id),
+                                          where('user_id', '==', userId)
+                                      )
+                                  ).then((s) => !s.empty)
+                                : Promise.resolve(false);
+
+                            // wait for them all
+                            const [comments, likes, isLiked, isSaved] = await Promise.all([
+                                commentsCountP,
+                                likesCountP,
+                                isLikedP,
+                                isSavedP,
+                            ]);
+
+                            return {
+                                id: docSnap.id,
+                                ...d,
+                                comments,
+                                likes,
+                                isLiked,
+                                isSaved,
+                                createdAt,
+                            } as Post & { createdAt: Date };
+                        });
+
+                        // await and update store
+                        const posts = await Promise.all(pPromises);
+                        set({ posts, loading: false });
+                    },
+                    (err) => {
+                        console.error('subscribeFeed snapshot error', err);
+                        set({ loading: false });
+                    }
+                );
+
+                return unsub;
             },
-
             addPost: async (post) => {
                 const { id, ...postWithoutId } = post;
                 const docRef = await addDoc(collection(db, 'Posts'), postWithoutId);

@@ -23,6 +23,7 @@ import VaccinationItem from '@/components/VaccinationItem';
 import { usePetStore } from '@/store/pet-store';
 
 import type { UserDoc } from '@/types/pet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
     // const user = db.collection('Users').get().then(snapshot => {
@@ -32,9 +33,12 @@ export default function HomeScreen() {
     // });
 
     const router = useRouter();
-    const { getActivePet, getUpcomingReminders, getUpcomingVaccinations } = usePetStore();
+    const { getActivePet, fetchUserPets, getUpcomingReminders, getUpcomingVaccinations } =
+        usePetStore();
 
+    // fetchUserPets('ZJ32TSDqbggFVDIIFFeL');
     const activePet = getActivePet();
+    // console.log(activePet);
     const upcomingReminders = getUpcomingReminders(7);
     const upcomingVaccinations = getUpcomingVaccinations(30);
 

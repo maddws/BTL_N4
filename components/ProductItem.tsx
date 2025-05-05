@@ -38,7 +38,7 @@ export default function ProductItem({ product, onPress }: ProductItemProps) {
                 </Text>
                 <View style={styles.ratingContainer}>
                     <Star size={12} color={Colors.warning} fill={Colors.warning} />
-                    <Text style={styles.rating}>{product.rating.toFixed(1)}</Text>
+                    <Text style={styles.rating}>{product.rating}</Text>
                     <Text style={styles.reviews}>({product.reviews})</Text>
                 </View>
                 <Text style={styles.price}>{formatPrice(product.price)}</Text>
