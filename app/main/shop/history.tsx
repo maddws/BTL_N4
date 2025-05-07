@@ -13,7 +13,7 @@ export default function OrderHistoryScreen() {
     const router = useRouter();
     const { orders, loadingOrders, subscribeOrders, getProductById } = useShopStore();
     const [tab, setTab] = useState<'processing' | 'done'>('processing');
-    // console.log('orders', orders);
+    console.log('orders', orders[0].items[0].rated);
 
     useEffect(() => subscribeOrders(), []);
 
@@ -66,7 +66,7 @@ export default function OrderHistoryScreen() {
                                     <View key={it.productId} style={styles.row}>
                                         <Text style={styles.productName}>{p.name}</Text>
                                         <Text style={styles.qty}>x{it.quantity}</Text>
-                                        {tab === 'done' && !item.rated && (
+                                        {tab === 'done' && !it.rated && (
                                             <TouchableOpacity
                                                 onPress={() =>
                                                     router.push({
@@ -84,14 +84,9 @@ export default function OrderHistoryScreen() {
                                                 <Text style={styles.rateTxt}>Đánh giá</Text>
                                             </TouchableOpacity>
                                         )}
-                                        {tab === 'done' && item.rated && (
-                                            <View style={styles.rateBtn}>
-                                                <Star
-                                                    size={16}
-                                                    color={Colors.card}
-                                                    fill={Colors.card}
-                                                />
-                                                <Text style={styles.rateTxt}>Đã đánh giá</Text>
+                                        {tab === 'done' && it.rated && (
+                                            <View>
+                                                <Text>Đã đánh giá</Text>
                                             </View>
                                         )}
                                     </View>

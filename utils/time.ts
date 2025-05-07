@@ -26,6 +26,10 @@ export function formatTime(timestamp) {
 
 export function toDMY(timestamp) {
     // console.log('timestamp:', new Date(timestamp).getTime());
+    if (!timestamp) {
+        console.log('timestamp:', timestamp);
+        return 'NaN'; // Trả về giá trị mặc định nếu timestamp không hợp lệ
+    }
     const ts: Timestamp = timestamp as Timestamp;
     const date = ts.toDate(); // Chuyển đổi Firestore timestamp thành đối tượng Date
     return date.toLocaleDateString('vi-VN', {

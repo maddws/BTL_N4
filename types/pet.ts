@@ -146,28 +146,25 @@ export interface UserDoc {
     username: string;
 }
 export type OrderStatus =
-    | 'pending' // vừa tạo, chờ xác nhận
-    | 'shipping' // đang vận chuyển
-    | 'done' // giao thành công
-    | 'canceled'; // huỷ
+    | 'processing' // vừa tạo, chờ xác nhận
+    | 'done'; // giao thành công
 
 export interface OrderItem {
-    product_id: string; // ID sản phẩm
+    productId: string; // ID sản phẩm
     quantity: number; // Số lượng
-    /**
-     * Cờ nội bộ (chỉ sử dụng trong client state):
-     *  - true  : người dùng đã gửi đánh giá
-     *  - false : chưa đánh giá
-     * Không lưu lên Firestore.
-     */
     rated?: boolean;
 }
 
 export interface Order {
     id: string; // = doc.id trên Firestore
     user_id: string; // UID chủ đơn
+    phone_number: string;
+    createdAt: any; // epoch millis – dùng Date.now()
     status: OrderStatus; // Trạng thái hiện tại
+    method: string;
+    ship: number;
+    total: number;
     total_all: number; // Tổng tiền (đã gồm ship)
-    created_at: number; // epoch millis – dùng Date.now()
+    address: string; // Địa chỉ giao hàng
     items: OrderItem[]; // Danh sách sản phẩm
 }

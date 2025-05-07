@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -55,24 +55,66 @@ export default function PostDetailsScreen() {
 
     /* ---------- local state ---------- */
     const [comment, setComment] = useState('');
-    const [comments, setComments] = useState<any[]>([]); // có thể typing chi tiết hơ
+    // const [comments, setComments] = useState<any[]>([]); // có thể typing chi tiết hơ
+    const [rawComments, setRawComments] = useState<Comment[]>([]);
+    const [likeMap, setLikeMap] = useState<Record<string, number>>({});
+    const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+
+    const displayComments = React.useMemo(() => {
+        return rawComments.map((c) => ({
+            ...c,
+            likes: likeMap[c.id] ?? 0,
+            isLiked: likedSet.has(c.id),
+        }));
+    }, [rawComments, likeMap, likedSet]);
+
     // console.log(comments);
     const userId = userProfile?.id;
-
-    /* ---------- sub comments ---------- */
+    /* 1️⃣ nghe comment content */
     useEffect(() => {
         if (!postId) return;
         const q = query(collection(db, 'Comments'), where('postId', '==', postId));
-        const un = onSnapshot(q, (snap) => {
+        return onSnapshot(q, (snap) => {
             const arr = snap.docs.map((d) => {
                 const data = d.data();
-                return { id: d.id, ...data, createdAt: data.createdAt?.toDate?.() ?? new Date() };
+                return {
+                    id: d.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate?.() ?? new Date(),
+                } as Comment;
             });
-            // mới nhất ở dưới cùng
-            setComments(arr.sort((a, b) => b.createdAt - a.createdAt));
+            // newest last
+            setRawComments(arr.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()));
         });
-        return un;
     }, [postId]);
+
+    /* 2️⃣ nghe like của tất cả comment trong post */
+    useEffect(() => {
+        if (!postId || !userId) return;
+        const q = query(collection(db, 'CommentLikes'), where('post_id', '==', postId));
+        return onSnapshot(q, (snap) => {
+            const lMap: Record<string, number> = {};
+            const mySet = new Set<string>();
+            snap.forEach((d) => {
+                const { cmt_id, user_id } = d.data() as any;
+                lMap[cmt_id] = (lMap[cmt_id] ?? 0) + 1;
+                if (user_id === userId) mySet.add(cmt_id);
+            });
+            setLikeMap(lMap);
+            setLikedSet(mySet);
+        });
+    }, [postId, userId]);
+
+    /* 3️⃣ derive */
+    const comments = useMemo(
+        () =>
+            rawComments.map((c) => ({
+                ...c,
+                likes: likeMap[c.id] ?? 0,
+                isLiked: likedSet.has(c.id),
+            })),
+        [rawComments, likeMap, likedSet]
+    );
 
     /* ---------- handlers (đã useCallback) ---------- */
     const handleLikePost = useCallback(() => {
@@ -85,26 +127,32 @@ export default function PostDetailsScreen() {
 
     const handleLikeComment = async (comment: Comment) => {
         if (!comment || !userId) return;
+
         const likeRef = collection(db, 'CommentLikes');
         const q = query(likeRef, where('cmt_id', '==', comment.id), where('user_id', '==', userId));
         const s = await getDocs(q);
+
         if (s.empty) {
-            await addDoc(likeRef, { user_id: userId, post_id: post.id, cmt_id: comment.id });
+            await addDoc(likeRef, {
+                user_id: userId,
+                post_id: post.id,
+                cmt_id: comment.id,
+            });
         } else {
             await deleteDoc(doc(db, 'CommentLikes', s.docs[0].id));
         }
-        setComments(
-            comments.map((c) => {
-                if (c.id === comment.id) {
-                    const isLiked = !c.isLiked;
-                    return {
-                        ...c,
-                        isLiked,
-                        likes: isLiked ? c.likes + 1 : c.likes - 1,
-                    };
-                }
-                return c;
-            })
+
+        /* ⭐ Optimistic update – update ngay trên UI */
+        setComments((prev) =>
+            prev.map((c) =>
+                c.id === comment.id
+                    ? {
+                          ...c,
+                          isLiked: !c.isLiked,
+                          likes: c.isLiked ? c.likes - 1 : c.likes + 1,
+                      }
+                    : c
+            )
         );
     };
 
@@ -124,138 +172,6 @@ export default function PostDetailsScreen() {
         });
         setComment('');
     };
-
-    useEffect(() => {
-        if (!post?.id) return; // chưa có post → bỏ qua
-        if (!userId) return; // đảm bảo userId sẵn sàng
-
-        const q = query(collection(db, 'CommentLikes'), where('post_id', '==', post.id));
-
-        const unsub = onSnapshot(q, (snap) => {
-            /* ----------- 1. DUYỆT QUA TỪNG DOC ----------- */
-            const likesArr = snap.docs.map((doc) => {
-                const d = doc.data(); // LÚC NÀY doc là QueryDocumentSnapshot
-                // d = { post_id, cmt_id, user_id }
-                return { id: doc.id, ...d };
-            });
-
-            /* ----------- 2. GOM LƯỢT THÍCH THEO COMMENT ----------- */
-            const likeMap: Record<string, number> = {};
-            const likedByMe = new Set<string>();
-
-            likesArr.forEach((l) => {
-                likeMap[l.cmt_id] = (likeMap[l.cmt_id] ?? 0) + 1;
-                if (l.user_id === userId) likedByMe.add(l.cmt_id);
-            });
-
-            /* ----------- 3. CẬP NHẬT STATE comments ----------- */
-            setComments((prev) =>
-                prev.map((c) => ({
-                    ...c,
-                    likes: likeMap[c.id] ?? 0,
-                    isLiked: likedByMe.has(c.id),
-                }))
-            );
-        });
-
-        return unsub; // hủy listener khi unmount
-    }, [post, userId]);
-
-    // useEffect(() => {
-    //     if (!post?.id) return; // chưa có post → bỏ qua
-    //     if (!userId) return; // đảm bảo userId sẵn sàng
-    //     console.log(post.id);
-
-    //     const q = query(collection(db, 'CommentLikes'), where('cmt_id', '==', post.id));
-
-    //     const unsub = onSnapshot(q, (snap) => {
-    //         /* ----------- 1. DUYỆT QUA TỪNG DOC ----------- */
-    //         const likesArr = snap.docs.map((doc) => {
-    //             if (doc.data()) return { id: doc.id, ...doc.data() };
-    //         });
-
-    //         /* ----------- 2. GOM LƯỢT THÍCH THEO COMMENT ----------- */
-    //         const likeMap: Record<string, number> = {};
-    //         const likedByMe = new Set<string>();
-
-    //         likesArr.forEach((l) => {
-    //             likeMap[l.cmt_id] = (likeMap[l.cmt_id] ?? 0) + 1;
-    //             if (l.user_id === userId) likedByMe.add(l.cmt_id);
-    //         });
-
-    //         /* ----------- 3. CẬP NHẬT STATE comments ----------- */
-    //         setComments((prev) =>
-    //             prev.map((c) => ({
-    //                 ...c,
-    //                 likes: likeMap[c.id] ?? 0,
-    //                 isLiked: likedByMe.has(c.id),
-    //             }))
-    //         );
-    //     });
-
-    //     return unsub; // hủy listener khi unmount
-    // }, [post, userId]);
-
-    // useEffect(() => {
-    //     if (!postId) return;
-
-    //     // nghe tất cả like của bài viết này
-
-    //     let result: any[] = [];
-    //     const unsub = onSnapshot(q, (snap) => {
-    //         const arr = snap.docs.map(async (d) => {
-    //             const data = await d.data();
-    //             result.push(data);
-    //             return data;
-    //         });
-    //         /* -----------------------------------------
-    //      1. Gom like theo commentId
-    //   ------------------------------------------*/
-    //         type LikeMap = Record<string, { likes: number; isLiked: boolean }>;
-    //         const map: LikeMap = {};
-
-    //         result.forEach((d) => {
-    //             const { cmt_id, user_id } = d;
-    //             if (!map[cmt_id]) map[cmt_id] = { likes: 0, isLiked: false };
-    //             map[cmt_id].likes += 1;
-    //             if (user_id === userId) map[cmt_id].isLiked = true;
-    //         });
-
-    //         /* -----------------------------------------
-    //      2. Cập nhật state comments
-    //      (giả định bạn đang giữ comments trong store
-    //       và có hàm update theo id)
-    //   ------------------------------------------*/
-    //         setComments((prev) =>
-    //             prev.map((c) => {
-    //                 const info = map[c.id] ?? { count: 0, likedByMe: false };
-    //                 return {
-    //                     ...c,
-    //                     likes: info.likes,
-    //                     isLiked: info.isLiked,
-    //                 };
-    //             })
-    //         );
-    //     });
-
-    //     return unsub; // cleanup
-    // }, [postId, userId]);
-    // useEffect(() => {
-    //     const q = query(collection(db, 'CommentLikes'), where('post_id', '==', post.id));
-    //     const un = onSnapshot(q, (snap) => {
-    //         const arr = snap.docs.map((d) => {
-    //             const data = d.data();
-    //             const q = query(
-    //                 collection(db, 'CommentLikes'),
-    //                 where('post_id', '==', post.id),
-    //                 where('cmt_id', '==', data.cmt_id)
-    //             );
-    //             const s = getDocs(q);
-    //             console.log(s);
-    //         });
-    //         // setComments(arr.sort((a, b) => b.createdAt - a.createdAt));
-    //     });
-    // }, [post?.id, userId]);
 
     // Ensure post.author exists to prevent "Cannot read property 'avatar' of undefined"
     const defaultAuthor = {

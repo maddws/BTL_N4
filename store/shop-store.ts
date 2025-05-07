@@ -15,7 +15,9 @@ import {
     getDoc,
     deleteDoc,
 } from 'firebase/firestore';
-import { Order } from '@/types/pet';
+import { produce } from 'immer';
+import { Order, OrderItem, OrderStatus } from '@/types/pet';
+import { Timestamp } from 'firebase/firestore';
 
 const getRating = async (pid: string) => {
     const snap = await getDocs(query(collection(db, 'ItemRating'), where('product_id', '==', pid)));
@@ -52,6 +54,7 @@ interface ShopState {
     cart: CartItem[];
     userId: string | null;
     loadingCart: boolean;
+    ratedSet: Set<string>; // ⇦ thêm
     loadingProducts: boolean;
     favorites: string[];
 
@@ -95,70 +98,74 @@ const toProduct = async (raw: any): Promise<Product> => {
         reviews: reviews ?? 0,
     } as Product;
 };
+const snapToOrder = (d: any, id: string): Order => {
+    return {
+        id,
+        ship: d.ship,
+        total: d.total,
+        method: d.method,
+        address: d.address,
+        user_id: d.user_id,
+        status: d.status as OrderStatus,
+        total_all: d.total_all,
+        createAt: d.createAt as Timestamp, // number epoch -> dễ format
+        items: d.items as OrderItem[],
+    };
+};
+const buildRatedSet = async (uid: string): Promise<Set<string>> => {
+    if (!uid) return new Set();
+
+    // query tất cả ItemRating của user
+    const qRate = query(collection(db, 'ItemRating'), where('user_id', '==', uid));
+
+    const snap = await getDocs(qRate);
+
+    const set: Set<string> = new Set();
+    snap.forEach((doc) => {
+        const { order_id, product_id } = doc.data() as any;
+        set.add(`${order_id}|${product_id}`); // key = "<orderId>|<productId>"
+    });
+
+    return set;
+};
 
 export const useShopStore = create<ShopState>()(
     persist(
         (set, get) => ({
             products: [],
             orders: [],
+
+            ratedSet: new Set(), // ⇦ thêm
+
             loadingOrders: false,
             cart: [],
             userId: null,
             loadingCart: false,
             loadingProducts: false,
             favorites: [],
+
             /* implementation fragment */
-            // subscribeOrders: () => {
-            //     const uid = get().userId;
-            //     if (!uid) return () => {};
-            //     const q = query(
-            //         collection(db, 'Orders'),
-            //         where('user_id', '==', uid)
-            //         // orderBy('created_at', 'desc')
-            //     );
-            //     set({ loadingOrders: true });
-            //     const unsub = onSnapshot(q, (snap) => {
-            //         const arr: Order[] = [];
-            //         snap.forEach((d) => arr.push({ id: d.id, ...(d.data() as any) }));
-            //         set({ orders: arr, loadingOrders: false });
-            //     });
-            //     return unsub;
-            // },
+
             subscribeOrders: () => {
                 const uid = get().userId;
                 if (!uid) return () => {};
 
-                /* 1. query Orders của user */
-                const ordQ = query(
-                    collection(db, 'Orders'),
-                    where('user_id', '==', uid)
-                    // orderBy('created_at', 'desc')
-                );
+                const qRef = query(collection(db, 'Orders'), where('user_id', '==', uid));
 
                 set({ loadingOrders: true });
 
-                const unsub = onSnapshot(ordQ, async (ordSnap) => {
-                    /* 2. query toàn bộ ItemRating của user 1 lần */
-                    const rateSnap = await getDocs(
-                        query(collection(db, 'ItemRating'), where('user_id', '==', uid))
-                    );
+                const unsub = onSnapshot(qRef, async (snap) => {
+                    const ratedSet = await buildRatedSet(uid); // đã trình bày ở bước trước
 
-                    /* 3. Build set các cặp (orderId|productId) đã đánh giá */
-                    const ratedSet = new Set<string>();
-                    rateSnap.forEach((d) => {
-                        const { order_id, product_id } = d.data() as any;
-                        ratedSet.add(`${order_id}|${product_id}`);
-                    });
+                    const orders: Order[] = snap.docs.map((doc) => {
+                        const o = snapToOrder(doc.data(), doc.id);
 
-                    /* 4. Gộp dữ liệu */
-                    const orders: Order[] = [];
-                    ordSnap.forEach((doc) => {
-                        const raw = doc.data() as any;
-                        const items = (raw.items || []).map((it: any) => ({
+                        /* Ẩn/hiện nút Đánh giá bằng ratedSet */
+                        o.items = o.items.map((it) => ({
                             ...it,
-                            rated: ratedSet.has(`${doc.id}|${it.product_id}`),
+                            rated: ratedSet.has(`${o.id}|${it.productId}`),
                         }));
-                        orders.push({ id: doc.id, ...raw, items });
+                        return o;
                     });
 
                     set({ orders, loadingOrders: false });
@@ -167,31 +174,9 @@ export const useShopStore = create<ShopState>()(
                 return unsub;
             },
 
-            // addRating: async (pid, oid, rating, review) => {
-            //     const uid = get().userId;
-
-            //     await setDoc(doc(collection(db, 'ItemRating')), {
-            //         user_id: uid,
-            //         product_id: pid,
-            //         order_id: oid,
-            //         rating,
-            //         review,
-            //         created_at: Date.now(),
-            //     });
-
-            //     /* cập nhật state cục bộ */
-            //     set(
-            //         produce((state: ShopState) => {
-            //             const order = state.orders.find((o) => o.id === oid);
-            //             if (!order) return;
-            //             const item = order.items.find((i) => i.product_id === pid);
-            //             if (item) item.rated = true;
-            //         })
-            //     );
-            // },
-
             addRating: async (pid, oid, rating, review) => {
                 const uid = get().userId;
+
                 await setDoc(doc(collection(db, 'ItemRating')), {
                     user_id: uid,
                     product_id: pid,
@@ -200,7 +185,18 @@ export const useShopStore = create<ShopState>()(
                     review,
                     created_at: Date.now(),
                 });
+
+                /* cập nhật state cục bộ */
+                set(
+                    produce((state: ShopState) => {
+                        const order = state.orders.find((o) => o.id === oid);
+                        if (!order) return;
+                        const item = order.items.find((i) => i.productId === pid);
+                        if (item) item.rated = true;
+                    })
+                );
             },
+
             getRatingsByProduct: async (pid) => {
                 const q = query(collection(db, 'ItemRating'), where('product_id', '==', pid));
                 const snap = await getDocs(q);
@@ -240,15 +236,33 @@ export const useShopStore = create<ShopState>()(
             },
 
             subscribeRatings: () => {
-                // listen changes in ItemRating to recalc averages
-                const ratingsRef = collection(db, 'ItemRating');
-                const unsub = onSnapshot(ratingsRef, async () => {
-                    // simply refetch products to include avg rating
-                    const prods = get().products;
-                    // optionally fetch per-product reviews and merge...
-                    // omitted for brevity
-                    set({ products: [...prods] });
+                const col = collection(db, 'ItemRating');
+
+                const unsub = onSnapshot(col, (snap) => {
+                    // 1️⃣  Gom nhóm rating theo product_id
+                    const statMap: Record<string, { sum: number; count: number }> = {};
+
+                    snap.forEach((d) => {
+                        const { product_id, rating } = d.data() as any;
+                        if (!statMap[product_id]) statMap[product_id] = { sum: 0, count: 0 };
+                        statMap[product_id].sum += rating ?? 0;
+                        statMap[product_id].count += 1;
+                    });
+
+                    // 2️⃣  Cập nhật state.products (bất biến)
+                    set((state) => ({
+                        products: state.products.map((p) => {
+                            const st = statMap[p.id];
+                            if (!st) return p; // sp chưa có rating
+                            return {
+                                ...p,
+                                rating: st.sum / st.count,
+                                reviews: st.count,
+                            };
+                        }),
+                    }));
                 });
+
                 return unsub;
             },
 
