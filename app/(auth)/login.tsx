@@ -19,16 +19,11 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext'; // Firestore ví dụ
 import { db } from '@/config/firebase';
 import { useSettingsStore } from '@/store/settings-store';
-// import { useSettingsStore, UserProfile } from '@/store/settings-store';
-// import { GoogleSignin } from '@react-native-google-signin/google-signin';
-// import { FirebaseAuthTypes } from '@react-native-firebase/auth';
-// import { GoogleAuthProvider, signInWithCredential, getAuth } from 'firebase/auth';
 
 export default function LoginScreen() {
     const router = useRouter();
     const { signIn } = useAuth();
     const { login } = useSettingsStore(); // Lưu trạng thái đăng nhập
-    //const { isLoggedIn } = useAuth(); // Kiểm tra trạng thái đăng nhập
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -57,19 +52,6 @@ export default function LoginScreen() {
         if (!validateForm()) return;
 
         try {
-            // const q = await db
-            // .collection('Users')
-            // .where('email', '==', email)
-            // .where('password', '==', await password)
-            // .limit(1)
-            // .get();
-            // const usersCol = collection(db, 'Users');
-            // const q = query(
-            //     usersCol,
-            //     where('email', '==', email),
-            //     where('password', '==', password),  // no `await` here
-            //     limit(1)
-            // );
             const usersCol = collection(db, 'Users');
             const q = query(
                 usersCol,
@@ -149,16 +131,6 @@ export default function LoginScreen() {
                 }}
             />
             <View style={{ marginTop: 65 }}></View>
-            {/* <Stack.Screen options={{
-        title: 'Đăng nhập',
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: Colors.background },
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft size={24} color={Colors.text} />
-          </TouchableOpacity>
-        ),
-      }} /> */}
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}

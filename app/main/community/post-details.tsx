@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -17,6 +17,7 @@ import Colors from '@/constants/colors';
 import { useCommunityStore } from '@/store/community-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { db } from '@/config/firebase';
+import { formatTime } from '@/utils/time';
 import {
     addDoc,
     collection,
@@ -25,6 +26,8 @@ import {
     getDocs,
     query,
     where,
+    onSnapshot,
+    doc,
     deleteDoc,
 } from 'firebase/firestore';
 
@@ -36,131 +39,63 @@ interface Comment {
         avatar: string;
     };
     content: string;
-    createdAt: string;
+    createdAt: Date;
     likes: number;
     isLiked: boolean;
 }
 
-async function fetchCommentsData(postId: string, setComments: any) {
-    const commentsRef = collection(db, 'Comments');
-    const q = query(commentsRef, where('postId', '==', postId));
-
-    // console.log('inside fetchCommentsData');
-
-    // Lắng nghe các thay đổi trong comments
-    const querySnapshot = await getDocs(q);
-    // console.log('Fetched comments:', querySnapshot.docs.length);
-    const comments: Comment[] = [];
-    querySnapshot.forEach((doc) => {
-        const commentData = doc.data() as Comment;
-        comments.push({ ...commentData, id: doc.id });
-        // console.log('Comment:', commentData);
-    });
-    // console.log(comments);
-    setComments(comments.reverse());
-    return comments;
-}
-
 export default function PostDetailsScreen() {
     const { id } = useLocalSearchParams();
-    const refetchFeed = useCommunityStore((state) => state.reFetchFeed);
     const router = useRouter();
-    const { posts, toggleLike, toggleSave } = useCommunityStore();
+    const { posts, onLikePost, onSavePost } = useCommunityStore();
     const { userProfile } = useSettingsStore();
-    const [comment, setComment] = useState('');
-    const [comments, setComments] = useState<Comment[]>([]);
 
     const post = posts.find((p) => p.id === id);
+    const postId = post?.id;
 
-    if (post) {
-        // console.log('Post found:', post);
-        // console.log('Post:', post.createdAt);
-        fetchCommentsData(post.id, setComments);
-    }
-    if (!post) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <Stack.Screen
-                    options={{
-                        title: 'Chi tiết bài viết',
-                        headerShadowVisible: false,
-                        headerStyle: { backgroundColor: Colors.background },
-                    }}
-                />
-                <View style={styles.notFound}>
-                    <Text style={styles.notFoundText}>Không tìm thấy bài viết</Text>
-                </View>
-            </SafeAreaView>
-        );
-    }
+    /* ---------- local state ---------- */
+    const [comment, setComment] = useState('');
+    const [comments, setComments] = useState<any[]>([]); // có thể typing chi tiết hơ
+    // console.log(comments);
+    const userId = userProfile?.id;
 
-    // const handleLike = () => {
-    //     toggleLike(post.id);
-    // };
-
-    // const handleSave = () => {
-    //     toggleSave(post.id);
-    // };
-    const handleLike = async () => {
-        console.log('handleLike called');
-        const userId = userProfile?.id; // Get current user id
-        const postId = post.id; // Get the post id
-
-        if (!userId) return; // Ensure user is logged in
-
-        // Check if the user has already liked the post
-        const likeRef = collection(db, 'PostLikes');
-        const q = query(likeRef, where('user_id', '==', userId), where('post_id', '==', postId));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            // If the like already exists, remove it (unlike)
-            console.log('Like already exists, removing it');
-            querySnapshot.forEach((doc) => {
-                deleteDoc(doc.ref); // Delete the like from Firestore
+    /* ---------- sub comments ---------- */
+    useEffect(() => {
+        if (!postId) return;
+        const q = query(collection(db, 'Comments'), where('postId', '==', postId));
+        const un = onSnapshot(q, (snap) => {
+            const arr = snap.docs.map((d) => {
+                const data = d.data();
+                return { id: d.id, ...data, createdAt: data.createdAt?.toDate?.() ?? new Date() };
             });
-            toggleLike(post.id); // Update local state
+            // mới nhất ở dưới cùng
+            setComments(arr.sort((a, b) => b.createdAt - a.createdAt));
+        });
+        return un;
+    }, [postId]);
+
+    /* ---------- handlers (đã useCallback) ---------- */
+    const handleLikePost = useCallback(() => {
+        onLikePost(post, userId);
+    }, [post, userId]);
+
+    const handleSavePost = useCallback(() => {
+        onSavePost(post, userId);
+    }, [post, userId]);
+
+    const handleLikeComment = async (comment: Comment) => {
+        if (!comment || !userId) return;
+        const likeRef = collection(db, 'CommentLikes');
+        const q = query(likeRef, where('cmt_id', '==', comment.id), where('user_id', '==', userId));
+        const s = await getDocs(q);
+        if (s.empty) {
+            await addDoc(likeRef, { user_id: userId, post_id: post.id, cmt_id: comment.id });
         } else {
-            // If the like doesn't exist, add it
-            console.log('Like does not exist, adding it');
-            await addDoc(likeRef, { user_id: userId, post_id: postId });
-            toggleLike(post.id); // Update local state
+            await deleteDoc(doc(db, 'CommentLikes', s.docs[0].id));
         }
-    };
-
-    const handleSave = async () => {
-        const userId = userProfile?.id; // Get current user id
-        const postId = post.id; // Get the post id
-
-        if (!userId) return; // Ensure user is logged in
-
-        // Check if the post is already saved by the user
-        const savedRef = collection(db, 'SavedPosts');
-        const q = query(savedRef, where('user_id', '==', userId), where('post_id', '==', postId));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            // If the post is already saved, remove it
-            querySnapshot.forEach((doc) => {
-                deleteDoc(doc.ref); // Remove the saved post
-            });
-            toggleSave(post.id); // Update local state
-        } else {
-            // If the post is not saved, save it
-            await addDoc(savedRef, { user_id: userId, post_id: postId });
-            toggleSave(post.id); // Update local state
-        }
-    };
-
-    // const handleShare = () => {
-    //     // Share functionality would be implemented here
-    //     alert('Chia sẻ bài viết');
-    // };
-
-    const toggleLikeComment = (commentId: string) => {
         setComments(
             comments.map((c) => {
-                if (c.id === commentId) {
+                if (c.id === comment.id) {
                     const isLiked = !c.isLiked;
                     return {
                         ...c,
@@ -173,73 +108,154 @@ export default function PostDetailsScreen() {
         );
     };
 
-    const handleComment = async () => {
-        if (!comment.trim()) return;
-        if (!userProfile) {
-            alert('Vui lòng đăng nhập để bình luận');
-            return;
-        }
-
-        const newComment = {
+    const onSendComment = async () => {
+        if (!comment.trim() || !post || !userProfile) return;
+        await addDoc(collection(db, 'Comments'), {
             postId: post.id,
             author: {
                 id: userProfile.id,
                 name: userProfile.name,
-                avatar:
-                    userProfile.avatar ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+                avatar: userProfile.avatar ?? 'https://i.pravatar.cc/50',
             },
-            content: comment,
+            content: comment.trim(),
             createdAt: serverTimestamp(),
-            likes: 0,
-            isLiked: false,
-        };
-
-        // Thêm bình luận vào Firestore
-        await addDoc(collection(db, 'Comments'), newComment);
-
+            // likes: 0,
+            // isLiked: false,
+        });
         setComment('');
     };
 
-    // const formatTime = (dateString: string) => {
-    //     const date = new Date(dateString);
-    //     const now = new Date();
-    //     const diffMs = now.getTime() - date.getTime();
-    //     const diffMins = Math.round(diffMs / 60000);
-    //     const diffHours = Math.round(diffMins / 60);
-    //     const diffDays = Math.round(diffHours / 24);
+    useEffect(() => {
+        if (!post?.id) return; // chưa có post → bỏ qua
+        if (!userId) return; // đảm bảo userId sẵn sàng
 
-    //     if (diffMins < 60) {
-    //         return `${diffMins} phút trước`;
-    //     } else if (diffHours < 24) {
-    //         return `${diffHours} giờ trước`;
-    //     } else {
-    //         return `${diffDays} ngày trước`;
-    //     }
-    // };
-    const formatTime = (timestamp: { seconds: number; nanoseconds: number }) => {
-        // Chuyển đổi Firestore timestamp (seconds + nanoseconds) thành đối tượng Date
-        if (!timestamp || !timestamp.seconds) {
-            return '0 phút trước'; // Trả về giá trị mặc định nếu timestamp không hợp lệ
-        }
-        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000); // nanoseconds / 1000000 để chuyển đổi nanoseconds thành milliseconds
-        const now = new Date();
+        const q = query(collection(db, 'CommentLikes'), where('post_id', '==', post.id));
 
-        // Tính toán sự khác biệt giữa thời gian hiện tại và thời gian đã cho
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.round(diffMs / 60000); // Chuyển đổi sang phút
-        const diffHours = Math.round(diffMins / 60); // Chuyển đổi sang giờ
-        const diffDays = Math.round(diffHours / 24); // Chuyển đổi sang ngày
+        const unsub = onSnapshot(q, (snap) => {
+            /* ----------- 1. DUYỆT QUA TỪNG DOC ----------- */
+            const likesArr = snap.docs.map((doc) => {
+                const d = doc.data(); // LÚC NÀY doc là QueryDocumentSnapshot
+                // d = { post_id, cmt_id, user_id }
+                return { id: doc.id, ...d };
+            });
 
-        // Trả về thời gian theo định dạng "xx phút trước", "xx giờ trước", "xx ngày trước"
-        if (diffMins < 60) {
-            return `${diffMins} phút trước`;
-        } else if (diffHours < 24) {
-            return `${diffHours} giờ trước`;
-        } else {
-            return `${diffDays} ngày trước`;
-        }
-    };
+            /* ----------- 2. GOM LƯỢT THÍCH THEO COMMENT ----------- */
+            const likeMap: Record<string, number> = {};
+            const likedByMe = new Set<string>();
+
+            likesArr.forEach((l) => {
+                likeMap[l.cmt_id] = (likeMap[l.cmt_id] ?? 0) + 1;
+                if (l.user_id === userId) likedByMe.add(l.cmt_id);
+            });
+
+            /* ----------- 3. CẬP NHẬT STATE comments ----------- */
+            setComments((prev) =>
+                prev.map((c) => ({
+                    ...c,
+                    likes: likeMap[c.id] ?? 0,
+                    isLiked: likedByMe.has(c.id),
+                }))
+            );
+        });
+
+        return unsub; // hủy listener khi unmount
+    }, [post, userId]);
+
+    // useEffect(() => {
+    //     if (!post?.id) return; // chưa có post → bỏ qua
+    //     if (!userId) return; // đảm bảo userId sẵn sàng
+    //     console.log(post.id);
+
+    //     const q = query(collection(db, 'CommentLikes'), where('cmt_id', '==', post.id));
+
+    //     const unsub = onSnapshot(q, (snap) => {
+    //         /* ----------- 1. DUYỆT QUA TỪNG DOC ----------- */
+    //         const likesArr = snap.docs.map((doc) => {
+    //             if (doc.data()) return { id: doc.id, ...doc.data() };
+    //         });
+
+    //         /* ----------- 2. GOM LƯỢT THÍCH THEO COMMENT ----------- */
+    //         const likeMap: Record<string, number> = {};
+    //         const likedByMe = new Set<string>();
+
+    //         likesArr.forEach((l) => {
+    //             likeMap[l.cmt_id] = (likeMap[l.cmt_id] ?? 0) + 1;
+    //             if (l.user_id === userId) likedByMe.add(l.cmt_id);
+    //         });
+
+    //         /* ----------- 3. CẬP NHẬT STATE comments ----------- */
+    //         setComments((prev) =>
+    //             prev.map((c) => ({
+    //                 ...c,
+    //                 likes: likeMap[c.id] ?? 0,
+    //                 isLiked: likedByMe.has(c.id),
+    //             }))
+    //         );
+    //     });
+
+    //     return unsub; // hủy listener khi unmount
+    // }, [post, userId]);
+
+    // useEffect(() => {
+    //     if (!postId) return;
+
+    //     // nghe tất cả like của bài viết này
+
+    //     let result: any[] = [];
+    //     const unsub = onSnapshot(q, (snap) => {
+    //         const arr = snap.docs.map(async (d) => {
+    //             const data = await d.data();
+    //             result.push(data);
+    //             return data;
+    //         });
+    //         /* -----------------------------------------
+    //      1. Gom like theo commentId
+    //   ------------------------------------------*/
+    //         type LikeMap = Record<string, { likes: number; isLiked: boolean }>;
+    //         const map: LikeMap = {};
+
+    //         result.forEach((d) => {
+    //             const { cmt_id, user_id } = d;
+    //             if (!map[cmt_id]) map[cmt_id] = { likes: 0, isLiked: false };
+    //             map[cmt_id].likes += 1;
+    //             if (user_id === userId) map[cmt_id].isLiked = true;
+    //         });
+
+    //         /* -----------------------------------------
+    //      2. Cập nhật state comments
+    //      (giả định bạn đang giữ comments trong store
+    //       và có hàm update theo id)
+    //   ------------------------------------------*/
+    //         setComments((prev) =>
+    //             prev.map((c) => {
+    //                 const info = map[c.id] ?? { count: 0, likedByMe: false };
+    //                 return {
+    //                     ...c,
+    //                     likes: info.likes,
+    //                     isLiked: info.isLiked,
+    //                 };
+    //             })
+    //         );
+    //     });
+
+    //     return unsub; // cleanup
+    // }, [postId, userId]);
+    // useEffect(() => {
+    //     const q = query(collection(db, 'CommentLikes'), where('post_id', '==', post.id));
+    //     const un = onSnapshot(q, (snap) => {
+    //         const arr = snap.docs.map((d) => {
+    //             const data = d.data();
+    //             const q = query(
+    //                 collection(db, 'CommentLikes'),
+    //                 where('post_id', '==', post.id),
+    //                 where('cmt_id', '==', data.cmt_id)
+    //             );
+    //             const s = getDocs(q);
+    //             console.log(s);
+    //         });
+    //         // setComments(arr.sort((a, b) => b.createdAt - a.createdAt));
+    //     });
+    // }, [post?.id, userId]);
 
     // Ensure post.author exists to prevent "Cannot read property 'avatar' of undefined"
     const defaultAuthor = {
@@ -262,7 +278,7 @@ export default function PostDetailsScreen() {
                         <TouchableOpacity
                             onPress={() => {
                                 router.back();
-                                refetchFeed();
+                                // refetchFeed();
                             }}
                         >
                             <ArrowLeft size={24} color={Colors.text} />
@@ -270,175 +286,186 @@ export default function PostDetailsScreen() {
                     ),
                 }}
             />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={styles.keyboardAvoidingView}
-            >
-                <FlatList
-                    data={comments}
-                    keyExtractor={(item) => item.id}
-                    ListHeaderComponent={() => (
-                        <View style={styles.postContainer}>
-                            <View style={styles.postHeader}>
-                                <Image
-                                    source={{ uri: author.avatar }}
-                                    style={styles.authorAvatar}
-                                />
-                                <View style={styles.authorInfo}>
-                                    <Text style={styles.authorName}>{author.name}</Text>
-                                    <Text style={styles.postTime}>{formatTime(createdAt)}</Text>
-                                </View>
-                            </View>
-
-                            <Text style={styles.postContent}>{post.content}</Text>
-
-                            {post.images && post.images.length > 0 && (
-                                <View style={styles.imagesContainer}>
-                                    {post.images.map((image, index) => (
-                                        <Image
-                                            key={index}
-                                            source={{ uri: image }}
-                                            style={styles.postImage}
-                                        />
-                                    ))}
-                                </View>
-                            )}
-
-                            <View style={styles.postStats}>
-                                <Text style={styles.statsText}>{post.likes} lượt thích</Text>
-                                <Text style={styles.statsText}>{comments.length} bình luận</Text>
-                            </View>
-
-                            <View style={styles.postActions}>
-                                <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-                                    <Heart
-                                        size={20}
-                                        color={post.isLiked ? Colors.error : Colors.textLight}
-                                        fill={post.isLiked ? Colors.error : 'transparent'}
+            {!post ? (
+                <View style={styles.notFound}>
+                    <Text style={styles.notFoundText}>Không tìm thấy bài viết</Text>
+                </View>
+            ) : (
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={styles.keyboardAvoidingView}
+                >
+                    <FlatList
+                        data={comments}
+                        keyExtractor={(item) => item.id}
+                        ListHeaderComponent={() => (
+                            <View style={styles.postContainer}>
+                                <View style={styles.postHeader}>
+                                    <Image
+                                        source={{ uri: author.avatar }}
+                                        style={styles.authorAvatar}
                                     />
-                                    <Text
-                                        style={[
-                                            styles.actionText,
-                                            post.isLiked && {
-                                                color: Colors.error,
-                                            },
-                                        ]}
-                                    >
-                                        Thích
+                                    <View style={styles.authorInfo}>
+                                        <Text style={styles.authorName}>{author.name}</Text>
+                                        <Text style={styles.postTime}>{formatTime(createdAt)}</Text>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.postContent}>{post.content}</Text>
+
+                                {post.images && post.images.length > 0 && (
+                                    <View style={styles.imagesContainer}>
+                                        {post.images.map((image, index) => (
+                                            <Image
+                                                key={index}
+                                                source={{ uri: image }}
+                                                style={styles.postImage}
+                                            />
+                                        ))}
+                                    </View>
+                                )}
+
+                                <View style={styles.postStats}>
+                                    <Text style={styles.statsText}>{post.likes} lượt thích</Text>
+                                    <Text style={styles.statsText}>
+                                        {comments.length} bình luận
                                     </Text>
-                                </TouchableOpacity>
+                                </View>
 
-                                <TouchableOpacity style={styles.actionButton}>
-                                    <MessageCircle size={20} color={Colors.textLight} />
-                                    <Text style={styles.actionText}>Bình luận</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
-                                    <Bookmark
-                                        size={20}
-                                        color={post.isSaved ? Colors.primary : Colors.textLight}
-                                        fill={post.isSaved ? Colors.primary : 'transparent'}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.actionText,
-                                            post.isSaved && {
-                                                color: Colors.primary,
-                                            },
-                                        ]}
-                                    >
-                                        Lưu
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {/* <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-                                    <Share2 size={20} color={Colors.textLight} />
-                                    <Text style={styles.actionText}>Chia sẻ</Text>
-                                </TouchableOpacity> */}
-                            </View>
-
-                            <View style={styles.commentsHeader}>
-                                <Text style={styles.commentsTitle}>Bình luận</Text>
-                            </View>
-                        </View>
-                    )}
-                    renderItem={({ item }) => (
-                        <View style={styles.commentItem}>
-                            <Image
-                                source={{ uri: item.author.avatar }}
-                                style={styles.commentAvatar}
-                            />
-                            <View style={styles.commentContent}>
-                                <Text style={styles.commentAuthor}>{item.author.name}</Text>
-                                <Text style={styles.commentText}>{item.content}</Text>
-                                <View style={styles.commentActions}>
-                                    <Text style={styles.commentTime}>
-                                        {formatTime(item.createdAt)}
-                                    </Text>
+                                <View style={styles.postActions}>
                                     <TouchableOpacity
-                                        style={styles.commentLikeButton}
-                                        onPress={() => toggleLikeComment(item.id)}
+                                        style={styles.actionButton}
+                                        onPress={handleLikePost}
                                     >
+                                        <Heart
+                                            size={20}
+                                            color={post.isLiked ? Colors.error : Colors.textLight}
+                                            fill={post.isLiked ? Colors.error : 'transparent'}
+                                        />
                                         <Text
                                             style={[
-                                                styles.commentActionText,
-                                                item.isLiked && styles.commentActionTextActive,
+                                                styles.actionText,
+                                                post.isLiked && {
+                                                    color: Colors.error,
+                                                },
                                             ]}
                                         >
                                             Thích
                                         </Text>
-                                        {item.likes > 0 && (
-                                            <View style={styles.commentLikeCount}>
-                                                <Heart
-                                                    size={12}
-                                                    color={Colors.error}
-                                                    fill={Colors.error}
-                                                />
-                                                <Text style={styles.commentLikeCountText}>
-                                                    {item.likes}
-                                                </Text>
-                                            </View>
-                                        )}
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={styles.commentReplyButton}>
-                                        <Text style={styles.commentActionText}>Trả lời</Text>
+
+                                    <TouchableOpacity style={styles.actionButton}>
+                                        <MessageCircle size={20} color={Colors.textLight} />
+                                        <Text style={styles.actionText}>Bình luận</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.actionButton}
+                                        onPress={handleSavePost}
+                                    >
+                                        <Bookmark
+                                            size={20}
+                                            color={post.isSaved ? Colors.primary : Colors.textLight}
+                                            fill={post.isSaved ? Colors.primary : 'transparent'}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.actionText,
+                                                post.isSaved && {
+                                                    color: Colors.primary,
+                                                },
+                                            ]}
+                                        >
+                                            Lưu
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
-                            </View>
-                        </View>
-                    )}
-                    ListFooterComponent={<View style={{ height: 80 }} />}
-                />
 
-                <View style={styles.commentInputContainer}>
-                    {userProfile && (
-                        <Image
-                            source={{
-                                uri:
-                                    userProfile.avatar ||
-                                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-                            }}
-                            style={styles.commentInputAvatar}
-                        />
-                    )}
-                    <TextInput
-                        style={styles.commentInput}
-                        placeholder="Viết bình luận..."
-                        placeholderTextColor={Colors.textLight}
-                        value={comment}
-                        onChangeText={setComment}
-                        multiline
+                                <View style={styles.commentsHeader}>
+                                    <Text style={styles.commentsTitle}>Bình luận</Text>
+                                </View>
+                            </View>
+                        )}
+                        renderItem={({ item }) => (
+                            <View style={styles.commentItem}>
+                                <Image
+                                    source={{ uri: item.author.avatar }}
+                                    style={styles.commentAvatar}
+                                />
+                                <View style={styles.commentContent}>
+                                    <Text style={styles.commentAuthor}>{item.author.name}</Text>
+                                    <Text style={styles.commentText}>{item.content}</Text>
+                                    <View style={styles.commentActions}>
+                                        <Text style={styles.commentTime}>
+                                            {formatTime(item.createdAt)}
+                                        </Text>
+                                        <TouchableOpacity
+                                            style={styles.commentLikeButton}
+                                            onPress={() => handleLikeComment(item)}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.commentActionText,
+                                                    item.isLiked && styles.commentActionTextActive,
+                                                ]}
+                                            >
+                                                Thích
+                                            </Text>
+                                            {item.likes > 0 && (
+                                                <View style={styles.commentLikeCount}>
+                                                    <Heart
+                                                        size={12}
+                                                        color={Colors.error}
+                                                        fill={Colors.error}
+                                                    />
+                                                    <Text style={styles.commentLikeCountText}>
+                                                        {item.likes}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                        {/* <TouchableOpacity style={styles.commentReplyButton}>
+                                            <Text style={styles.commentActionText}>Trả lời</Text>
+                                        </TouchableOpacity> */}
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                        ListFooterComponent={<View style={{ height: 80 }} />}
                     />
-                    <TouchableOpacity
-                        style={[styles.sendButton, !comment.trim() && styles.sendButtonDisabled]}
-                        onPress={handleComment}
-                        disabled={!comment.trim()}
-                    >
-                        <Send size={20} color={Colors.card} />
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
+
+                    <View style={styles.commentInputContainer}>
+                        {userProfile && (
+                            <Image
+                                source={{
+                                    uri:
+                                        userProfile.avatar ||
+                                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+                                }}
+                                style={styles.commentInputAvatar}
+                            />
+                        )}
+                        <TextInput
+                            style={styles.commentInput}
+                            placeholder="Viết bình luận..."
+                            placeholderTextColor={Colors.textLight}
+                            value={comment}
+                            onChangeText={setComment}
+                            multiline
+                        />
+                        <TouchableOpacity
+                            style={[
+                                styles.sendButton,
+                                !comment.trim() && styles.sendButtonDisabled,
+                            ]}
+                            onPress={onSendComment}
+                            disabled={!comment.trim()}
+                        >
+                            <Send size={20} color={Colors.card} />
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            )}
         </SafeAreaView>
     );
 }

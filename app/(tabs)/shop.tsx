@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Search, ShoppingCart } from 'lucide-react-native';
+import { Search, ShoppingCart, HistoryIcon } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import ProductItem from '@/components/ProductItem';
 import { useShopStore } from '@/store/shop-store';
@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '@/config/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 
-type Category = 'all' | 'food' | 'toys' | 'accessories' | 'health' | 'grooming';
+type Category = 'all' | 'food' | 'toys' | 'accessories' | 'health' | 'grooming' | 'favorites';
 
 const categoryLabels: Record<Category, string> = {
     all: 'Tất cả',
@@ -27,6 +27,7 @@ const categoryLabels: Record<Category, string> = {
     accessories: 'Phụ kiện',
     health: 'Sức khỏe',
     grooming: 'Vệ sinh',
+    favorites: 'Yêu thích',
 };
 
 export default function ShopScreen() {
@@ -40,6 +41,7 @@ export default function ShopScreen() {
         cartTotal,
         subscribeProducts,
         subscribeRatings,
+        getFavoriteProducts,
         cartItems: getCartItems,
     } = useShopStore();
 
@@ -60,10 +62,16 @@ export default function ShopScreen() {
         });
     }, []);
 
-    const filteredProducts =
-        activeCategory === 'all'
-            ? products
-            : products.filter((product) => product.category === activeCategory);
+    const getCateProduct = () => {
+        if (activeCategory === 'favorites') {
+            return getFavoriteProducts();
+        } else if (activeCategory === 'all') {
+            return products;
+        } else {
+            return products.filter((product) => product.category === activeCategory);
+        }
+    };
+    const filteredProducts = getCateProduct();
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>
@@ -74,6 +82,15 @@ export default function ShopScreen() {
                 >
                     <Search size={20} color={Colors.textLight} />
                     <Text style={styles.searchPlaceholder}>Tìm kiếm sản phẩm...</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.cartButton}
+                    onPress={() => {
+                        router.push('/main/shop/history');
+                    }}
+                >
+                    <HistoryIcon size={24} color={Colors.text} />
                 </TouchableOpacity>
 
                 <TouchableOpacity

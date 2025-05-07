@@ -18,8 +18,8 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<UserDoc | null>(null);
     const [loading, setLoading] = useState(true);
-    const { resetCart } = useShopStore();
-    const { resetFeed } = useCommunityStore();
+    // const { resetCart } = useShopStore();
+    // const { resetFeed } = useCommunityStore();
 
     // Khi app mount, đọc lại user từ AsyncStorage
     useEffect(() => {
@@ -54,8 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await AsyncStorage.removeItem('user');
             setUser(null);
-            resetCart();
-            resetFeed();
+            // resetCart();
+            // resetFeed();
         } catch (e) {
             console.error('Failed to remove user from storage', e);
         }

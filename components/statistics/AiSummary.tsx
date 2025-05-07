@@ -50,6 +50,7 @@ ActivityLogs: ${compact(activity)}
 MedicalRecords: ${compact(medical)}
 VaccinationSchedule: ${compact(vaccine)}
 `;
+            console.log(payloadData);
 
             //prompt
             const prompt =

@@ -15,22 +15,12 @@ import {
     getDoc,
     deleteDoc,
 } from 'firebase/firestore';
-// import {
-//     collection,
-//     getDocs,
-//     getDoc,
-//     query,
-//     where,
-//     doc,
-//     setDoc,
-//     deleteDoc,
-// } from 'firebase/firestore';
-import { Alert } from 'react-native';
-import { flingGestureHandlerProps } from 'react-native-gesture-handler/lib/typescript/handlers/FlingGestureHandler';
+import { Order } from '@/types/pet';
 
 const getRating = async (pid: string) => {
     const snap = await getDocs(query(collection(db, 'ItemRating'), where('product_id', '==', pid)));
     const total = snap.docs.reduce((s, d) => s + (d.data().rating || 0), 0);
+    if (total === 0) return { rating: null, reviews: null };
     return {
         rating: snap.size ? total / snap.size : 0,
         reviews: snap.size,
@@ -55,12 +45,24 @@ interface CartItem {
 }
 
 interface ShopState {
+    orders: Order[];
+    loadingOrders: boolean;
+
     products: Product[];
     cart: CartItem[];
     userId: string | null;
     loadingCart: boolean;
     loadingProducts: boolean;
     favorites: string[];
+
+    subscribeOrders: () => () => void; // realtime
+    addRating: (
+        productId: string,
+        orderId: string,
+        rating: number,
+        review: string
+    ) => Promise<void>;
+    getRatingsByProduct: (pid: string) => Promise<{ rating: number; reviews: number; data: any[] }>;
 
     addToFavorites: (productId: string) => void;
     removeFromFavorites: (productId: string) => void;
@@ -69,20 +71,18 @@ interface ShopState {
     subscribeRatings: () => () => void;
 
     // Getters
-    // getCartItems: () => { product: Product; quantity: number }[];
-    // getCartTotal: () => number;
     getFavoriteProducts: () => Product[];
     getProductsByCategory: (category: string) => Product[];
     getProductById: (id: string) => Product | undefined;
     getProductsBySearch: (query: string) => Product[];
 
-    // cart actions
+    // Cart actions
     addToCart: (id: string, qty?: number) => void;
     updateQty: (id: string, qty: number) => void;
     removeFromCart: (id: string) => void;
     clearCart: () => void;
 
-    // helpers
+    // Helpers
     setUser: (uid: string | null) => Promise<void>;
     cartItems: () => { product: Product; quantity: number }[];
     cartTotal: () => number;
@@ -100,24 +100,142 @@ export const useShopStore = create<ShopState>()(
     persist(
         (set, get) => ({
             products: [],
+            orders: [],
+            loadingOrders: false,
             cart: [],
             userId: null,
             loadingCart: false,
             loadingProducts: false,
             favorites: [],
+            /* implementation fragment */
+            // subscribeOrders: () => {
+            //     const uid = get().userId;
+            //     if (!uid) return () => {};
+            //     const q = query(
+            //         collection(db, 'Orders'),
+            //         where('user_id', '==', uid)
+            //         // orderBy('created_at', 'desc')
+            //     );
+            //     set({ loadingOrders: true });
+            //     const unsub = onSnapshot(q, (snap) => {
+            //         const arr: Order[] = [];
+            //         snap.forEach((d) => arr.push({ id: d.id, ...(d.data() as any) }));
+            //         set({ orders: arr, loadingOrders: false });
+            //     });
+            //     return unsub;
+            // },
+            subscribeOrders: () => {
+                const uid = get().userId;
+                if (!uid) return () => {};
+
+                /* 1. query Orders của user */
+                const ordQ = query(
+                    collection(db, 'Orders'),
+                    where('user_id', '==', uid)
+                    // orderBy('created_at', 'desc')
+                );
+
+                set({ loadingOrders: true });
+
+                const unsub = onSnapshot(ordQ, async (ordSnap) => {
+                    /* 2. query toàn bộ ItemRating của user 1 lần */
+                    const rateSnap = await getDocs(
+                        query(collection(db, 'ItemRating'), where('user_id', '==', uid))
+                    );
+
+                    /* 3. Build set các cặp (orderId|productId) đã đánh giá */
+                    const ratedSet = new Set<string>();
+                    rateSnap.forEach((d) => {
+                        const { order_id, product_id } = d.data() as any;
+                        ratedSet.add(`${order_id}|${product_id}`);
+                    });
+
+                    /* 4. Gộp dữ liệu */
+                    const orders: Order[] = [];
+                    ordSnap.forEach((doc) => {
+                        const raw = doc.data() as any;
+                        const items = (raw.items || []).map((it: any) => ({
+                            ...it,
+                            rated: ratedSet.has(`${doc.id}|${it.product_id}`),
+                        }));
+                        orders.push({ id: doc.id, ...raw, items });
+                    });
+
+                    set({ orders, loadingOrders: false });
+                });
+
+                return unsub;
+            },
+
+            // addRating: async (pid, oid, rating, review) => {
+            //     const uid = get().userId;
+
+            //     await setDoc(doc(collection(db, 'ItemRating')), {
+            //         user_id: uid,
+            //         product_id: pid,
+            //         order_id: oid,
+            //         rating,
+            //         review,
+            //         created_at: Date.now(),
+            //     });
+
+            //     /* cập nhật state cục bộ */
+            //     set(
+            //         produce((state: ShopState) => {
+            //             const order = state.orders.find((o) => o.id === oid);
+            //             if (!order) return;
+            //             const item = order.items.find((i) => i.product_id === pid);
+            //             if (item) item.rated = true;
+            //         })
+            //     );
+            // },
+
+            addRating: async (pid, oid, rating, review) => {
+                const uid = get().userId;
+                await setDoc(doc(collection(db, 'ItemRating')), {
+                    user_id: uid,
+                    product_id: pid,
+                    order_id: oid,
+                    rating,
+                    review,
+                    created_at: Date.now(),
+                });
+            },
+            getRatingsByProduct: async (pid) => {
+                const q = query(collection(db, 'ItemRating'), where('product_id', '==', pid));
+                const snap = await getDocs(q);
+                const data = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+                const avg = data.reduce((s, d) => s + d.rating, 0) / (data.length || 1);
+                return { rating: avg, reviews: data.length, data };
+            },
 
             subscribeProducts: () => {
-                const q = query(collection(db, 'Products'));
+                const col = collection(db, 'Products');
                 set({ loadingProducts: true });
-                const unsub = onSnapshot(q, async (snap) => {
+
+                const unsub = onSnapshot(col, async (snap) => {
                     const prods: Product[] = [];
+
+                    // 1. map thô
                     snap.docs.forEach((d) => {
                         prods.push({ id: d.id, ...(d.data() as any) });
                     });
+
+                    // 2. lấy rating + reviews song song
+                    await Promise.all(
+                        prods.map(async (p) => {
+                            const stat = await get().getRatingsByProduct(p.id);
+                            p.rating = stat.rating;
+                            p.reviews = stat.reviews;
+                        })
+                    );
+
                     set({ products: prods, loadingProducts: false });
+
                     // cache offline
                     await AsyncStorage.setItem('cachedProducts', JSON.stringify(prods));
                 });
+
                 return unsub;
             },
 
@@ -254,179 +372,3 @@ export const useShopStore = create<ShopState>()(
         }
     )
 );
-
-// import { create } from 'zustand';
-// import { persist, createJSONStorage } from 'zustand/middleware';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { Product } from '@/types/pet'; // Import kiểu dữ liệu Product
-// import { db } from '@/config/firebase'; // Import Firestore instance
-// import {
-//     collection,
-//     doc,
-//     getDoc,
-//     getDocs,
-//     setDoc,
-//     updateDoc,
-//     query,
-//     where,
-// } from 'firebase/firestore';
-// import { ListCollapse } from 'lucide-react-native';
-
-// const productsCollection = collection(db, 'Products');
-// const cartCollection = collection(db, 'Carts'); // Giả sử giỏ hàng lưu trong Firestore
-
-// // Lấy tất cả sản phẩm từ Firestore
-// const getProductsFromFirestore = async () => {
-//     const querySnapshot = await getDocs(productsCollection);
-//     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-// };
-
-// // Thêm một sản phẩm vào giỏ hàng
-// const addToCartInFirestore = async (userId: string, productId: string, quantity: number) => {
-//     const cartRef = doc(cartCollection, userId);
-//     const cartSnapshot = await getDoc(cartRef);
-//     if (cartSnapshot.exists()) {
-//         const existingCart = cartSnapshot.data().items || [];
-//         existingCart.push({ productId, quantity });
-//         await updateDoc(cartRef, { items: existingCart });
-//     } else {
-//         await setDoc(cartRef, { userId, items: [{ productId, quantity }] });
-//     }
-// };
-
-// interface CartItem {
-//     productId: string;
-//     quantity: number;
-// }
-
-// interface ShopState {
-//     products: Product[];
-//     cart: CartItem[];
-//     favorites: string[];
-
-//     // Actions
-//     addToCart: (userId: string, productId: string, quantity?: number) => void;
-//     removeFromCart: (userId: string, productId: string) => void;
-//     updateCartItemQuantity: (userId: string, productId: string, quantity: number) => void;
-//     fetchProducts: () => void;
-//     clearCart: () => void;
-//     // Getters
-//     getCartItems: () => { product: Product; quantity: number }[];
-//     getCartTotal: () => number;
-//     getFavoriteProducts: () => Product[];
-//     getProductsByCategory: (category: string) => Product[];
-//     getProductById: (id: string) => Product | undefined;
-//     getProductsBySearch: (query: string) => Product[];
-// }
-
-// export const useShopStore = create<ShopState>()(
-//     persist(
-//         (set, get) => ({
-//             products: [], // Mảng sản phẩm sẽ được lấy từ Firestore
-//             cart: [],
-//             favorites: [],
-
-//             // Fetch products from Firestore when the store is initialized
-//             fetchProducts: async () => {
-//                 try {
-//                     const products = await getProductsFromFirestore();
-
-//                     // Dùng Promise.all để đợi tất cả các review được lấy về
-//                     const visualProducts = await Promise.all(
-//                         products.map(async (pr) => {
-//                             // Lấy thông tin review cho từng sản phẩm
-//                             const review = await getProductWithReviewsAndRating(pr.id);
-
-//                             return {
-//                                 id: pr.id,
-//                                 name: pr.name,
-//                                 description: pr.description,
-//                                 price: pr.price,
-//                                 imageUrl: pr.imageUrl,
-//                                 category: pr.category,
-//                                 rating: review?.rating || 0, // Lấy giá trị rating từ review nếu có
-//                                 reviews: review?.count || 0, // Lấy số lượng đánh giá từ review nếu có
-//                                 inStock: pr.inStock,
-//                             };
-//                         })
-//                     );
-
-//                     // Cập nhật state với mảng visualProducts đã tạo
-//                     set({ products: visualProducts });
-//                 } catch (error) {
-//                     console.error('Error fetching products:', error);
-//                 }
-//             },
-
-//             addToCart: async (userId, productId, quantity = 1) => {
-//                 // Lấy giỏ hàng từ Firestore
-//                 await addToCartInFirestore(userId, productId, quantity);
-
-//                 // Cập nhật lại giỏ hàng trong store
-//                 const newCart = [...get().cart, { productId, quantity }];
-//                 set({ cart: newCart });
-//             },
-
-//             removeFromCart: (productId) =>
-//                 set((state) => ({
-//                     cart: state.cart.filter((item) => item.productId !== productId),
-//                 })),
-
-//             updateCartItemQuantity: (productId, quantity) =>
-//                 set((state) => ({
-//                     cart: state.cart.map((item) =>
-//                         item.productId === productId
-//                             ? { ...item, quantity: Math.max(1, quantity) }
-//                             : item
-//                     ),
-//                 })),
-
-//             clearCart: () => set({ cart: [] }),
-
-//             getCartItems: () => {
-//                 const { products, cart } = get();
-//                 return cart
-//                     .map((item) => ({
-//                         product: products.find((p) => p.id === item.productId)!,
-//                         quantity: item.quantity,
-//                     }))
-//                     .filter((item) => item.product);
-//             },
-
-//             getCartTotal: () => {
-//                 const cartItems = get().getCartItems();
-//                 return cartItems.reduce(
-//                     (total, item) => total + item.product.price * item.quantity,
-//                     0
-//                 );
-//             },
-
-//             getFavoriteProducts: () => {
-//                 const { products, favorites } = get();
-//                 return products.filter((product) => favorites.includes(product.id));
-//             },
-
-//             getProductsByCategory: (category) => {
-//                 return get().products.filter((product) => product.category === category);
-//             },
-
-//             getProductById: (id) => {
-//                 return get().products.find((product) => product.id === id);
-//             },
-
-//             getProductsBySearch: (query) => {
-//                 const searchTerm = query.toLowerCase().trim();
-//                 return get().products.filter(
-//                     (product) =>
-//                         product.name.toLowerCase().includes(searchTerm) ||
-//                         product.description.toLowerCase().includes(searchTerm) ||
-//                         product.category.toLowerCase().includes(searchTerm)
-//                 );
-//             },
-//         }),
-//         {
-//             name: 'shop-storage',
-//             storage: createJSONStorage(() => AsyncStorage),
-//         }
-//     )
-// );

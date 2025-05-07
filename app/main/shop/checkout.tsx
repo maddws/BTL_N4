@@ -16,7 +16,7 @@ import Colors from '@/constants/colors';
 import { useShopStore } from '@/store/shop-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { db } from '@/config/firebase';
-import { Firestore, collection, setDoc, doc } from 'firebase/firestore';
+import { Firestore, collection, setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 export default function CheckoutScreen() {
@@ -64,8 +64,9 @@ export default function CheckoutScreen() {
         }
 
         try {
-            const orderId = Date.now().toString(); // Generate a unique ID
-            const orderRef = doc(db, 'Orders', orderId);
+            // const orderId = Date.now().toString(); // Generate a unique ID
+            const orderRef = doc(collection(db, 'Orders'));
+
             const orderData = {
                 user_id: userProfile?.id,
                 address: address,
@@ -75,6 +76,8 @@ export default function CheckoutScreen() {
                     productId: item.productId,
                     quantity: item.quantity,
                 })),
+                createAt: new Date(),
+                status: 'processing',
                 total: subtotal,
                 ship: shippingFee,
                 total_all: total,

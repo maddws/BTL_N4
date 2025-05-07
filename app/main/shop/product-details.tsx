@@ -91,22 +91,28 @@ export default function ProductDetailsScreen() {
                             />
                         </TouchableOpacity>
                     </View>
-
                     <Text style={styles.price}>{formatPrice(product.price)}</Text>
-
                     <View style={styles.ratingContainer}>
                         <Star size={16} color={Colors.warning} fill={Colors.warning} />
                         <Text style={styles.rating}>{product.rating}</Text>
                         <Text style={styles.reviews}>({product.reviews} đánh giá)</Text>
                     </View>
 
-                    <View style={styles.divider} />
+                    <TouchableOpacity
+                        onPress={() =>
+                            router.push({
+                                pathname: '/main/shop/reviews',
+                                params: { pid: product.id }, // chỉ xem
+                            })
+                        }
+                    >
+                        <Text style={{ color: Colors.primary, marginLeft: 4 }}>Xem tất cả</Text>
+                    </TouchableOpacity>
 
+                    <View style={styles.divider} />
                     <Text style={styles.descriptionTitle}>Mô tả sản phẩm</Text>
                     <Text style={styles.description}>{product.description}</Text>
-
                     <View style={styles.divider} />
-
                     <Text style={styles.quantityTitle}>Số lượng</Text>
                     <View style={styles.quantityContainer}>
                         <TouchableOpacity

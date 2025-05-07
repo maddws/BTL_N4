@@ -147,9 +147,6 @@ export default function CreatePostScreen() {
             // 4) Lưu vào Firestore
             addPost(newPost); // thêm vào local store trước
 
-            // 5) Cập nhật local store (nếu vẫn muốn)
-            // addPost({ id: docRef.id, ...newPost });
-
             Alert.alert('Thành công', 'Bài viết của bạn đã được đăng', [
                 { text: 'OK', onPress: () => router.push('/(tabs)/community') },
             ]);

@@ -3,7 +3,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { posts as mockPosts } from '@/mocks/community';
 import { db } from '@/config/firebase';
-import { collection, query, orderBy, getDocs, addDoc, where, onSnapshot } from 'firebase/firestore';
+import {
+    collection,
+    query,
+    orderBy,
+    getDocs,
+    addDoc,
+    where,
+    onSnapshot,
+    deleteDoc,
+    doc,
+} from 'firebase/firestore';
 
 export interface Author {
     id: string;
@@ -38,6 +48,8 @@ interface CommunityState {
     savePost: (postId: string) => void;
     unsavePost: (postId: string) => void;
     subscribeFeed: () => () => void; // Subscribe to feed updates
+    onSavePost: (post: any, userId: string) => void; // Save a post
+    onLikePost: (post: any, userId: string) => void; // Like a post
     // fetchCommentPost: (postId: string) => void; // Fetch comments for a specific post
 
     resetFeed: () => void; // Reset to mock data
@@ -148,6 +160,42 @@ export const useCommunityStore = create<CommunityState>()(
 
                 return unsub;
             },
+            onLikePost: async (post, userId) => {
+                if (!post || !userId) return;
+                const likeRef = collection(db, 'PostLikes');
+                const q = query(
+                    likeRef,
+                    where('post_id', '==', post.id),
+                    where('user_id', '==', userId)
+                );
+                const s = await getDocs(q);
+                if (s.empty) {
+                    // thêm like
+                    await addDoc(likeRef, { user_id: userId, post_id: post.id });
+                } else {
+                    // bỏ like
+                    await deleteDoc(doc(db, 'PostLikes', s.docs[0].id));
+                }
+                get().toggleLike(post.id); // Updated to use get() to access toggleLike
+            },
+
+            onSavePost: async (post, userId) => {
+                if (!post || !userId) return;
+                const saveRef = collection(db, 'SavedPosts');
+                const q = query(
+                    saveRef,
+                    where('post_id', '==', post.id),
+                    where('user_id', '==', userId)
+                );
+                const s = await getDocs(q);
+                if (s.empty) {
+                    await addDoc(saveRef, { user_id: userId, post_id: post.id });
+                } else {
+                    await deleteDoc(doc(db, 'SavedPosts', s.docs[0].id));
+                }
+                get().toggleSave(post.id);
+            },
+
             addPost: async (post) => {
                 const { id, ...postWithoutId } = post;
                 const docRef = await addDoc(collection(db, 'Posts'), postWithoutId);
