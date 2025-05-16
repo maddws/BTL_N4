@@ -32,7 +32,7 @@ export default function TimeChart({ labels, data }: { labels: string[]; data: nu
     };
     return (
         <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Caleries tiêu thụ mỗi ngày</Text>
+            <Text style={styles.chartTitle}>Thời gian hoạt động mỗi ngày</Text>
             <Text style={styles.chartSubtitle}>(*: chưa thêm dữ liệu)</Text>
 
             <BarChart
@@ -40,7 +40,7 @@ export default function TimeChart({ labels, data }: { labels: string[]; data: nu
                 width={w - 50}
                 height={220}
                 yAxisLabel=""
-                yAxisSuffix=" kcal"
+                yAxisSuffix=" giờ"
                 chartConfig={{
                     ...baseConfig,
                     color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
