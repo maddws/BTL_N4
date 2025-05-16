@@ -37,6 +37,8 @@ interface CommunityState {
     posts: Post[];
     savedPosts: string[];
     loading: boolean;
+    likeCountMap: Record<string, number>; // { postId: 12 }
+    commentCountMap: Record<string, number>; // { postId: 5 }
 
     // Actions
     addPost: (post: Post) => Promise<void>; // Change to Promise<void> for async
@@ -63,6 +65,9 @@ export const useCommunityStore = create<CommunityState>()(
             posts: [],
             savedPosts: [],
             loading: false,
+            likeCountMap: {},
+            commentCountMap: {},
+
             resetFeed: () => set({ posts: [], savedPosts: [] }), // Reset to mock data
             clearPosts: () => set({ posts: [], loading: false }),
 
@@ -82,7 +87,7 @@ export const useCommunityStore = create<CommunityState>()(
                 const q = query(postsRef, orderBy('createdAt', 'desc'));
 
                 // Start listening
-                const unsub = onSnapshot(
+                const unsubPosts = onSnapshot(
                     q,
                     async (snapshot) => {
                         const userId = await userPromise;
@@ -101,6 +106,7 @@ export const useCommunityStore = create<CommunityState>()(
                             const commentsCountP = getDocs(
                                 query(collection(db, 'Comments'), where('postId', '==', docSnap.id))
                             ).then((s) => s.size);
+                            console.log(commentsCountP);
 
                             const likesCountP = getDocs(
                                 query(
@@ -157,8 +163,65 @@ export const useCommunityStore = create<CommunityState>()(
                         set({ loading: false });
                     }
                 );
+                const unsubLikes = onSnapshot(collection(db, 'PostLikes'), (snap) => {
+                    // build lên Map<tổng likes>
+                    const lMap: Record<string, number> = {};
+                    snap.forEach((d) => {
+                        const { post_id } = d.data() as any;
+                        lMap[post_id] = (lMap[post_id] ?? 0) + 1;
+                    });
 
-                return unsub;
+                    // map lại posts
+                    set((state) => ({
+                        posts: state.posts.map((p) => ({
+                            ...p,
+                            likes: lMap[p.id] ?? 0,
+                        })),
+                    }));
+                });
+
+                // 3️⃣ listener Comments → cập nhật trực tiếp posts[].comments
+                const unsubComments = onSnapshot(collection(db, 'Comments'), (snap) => {
+                    const cMap: Record<string, number> = {};
+                    snap.forEach((d) => {
+                        const { postId } = d.data() as any;
+                        cMap[postId] = (cMap[postId] ?? 0) + 1;
+                    });
+
+                    set((state) => ({
+                        posts: state.posts.map((p) => ({
+                            ...p,
+                            comments: cMap[p.id] ?? 0,
+                        })),
+                    }));
+                });
+                // const unsubLikes = onSnapshot(collection(db, 'PostLikes'), (snap) => {
+                //     const lMap: Record<string, number> = {};
+                //     snap.forEach((d) => {
+                //         const { post_id } = d.data() as any;
+                //         lMap[post_id] = (lMap[post_id] ?? 0) + 1;
+                //     });
+                //     set({ likeCountMap: lMap });
+                // });
+
+                // // 🔄 Listener comments
+                // const unsubComments = onSnapshot(collection(db, 'Comments'), (snap) => {
+                //     const cMap: Record<string, number> = {};
+                //     snap.forEach((d) => {
+                //         const { postId } = d.data() as any;
+                //         cMap[postId] = (cMap[postId] ?? 0) + 1;
+                //     });
+                //     set({ commentCountMap: cMap });
+                // });
+
+                // gộp unsub
+                return () => {
+                    unsubPosts();
+                    unsubLikes();
+                    unsubComments();
+                };
+
+                // return unsub;
             },
             onLikePost: async (post, userId) => {
                 if (!post || !userId) return;

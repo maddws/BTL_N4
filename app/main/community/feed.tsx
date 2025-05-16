@@ -7,6 +7,7 @@ import {
     TextInput,
     Image,
 } from 'react-native';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import Colors from '@/constants/colors';
@@ -15,8 +16,16 @@ import { Plus } from 'lucide-react-native';
 import PostItem from '@/components/PostItem';
 
 export default function Feed() {
-    const { posts } = useCommunityStore();
     const router = useRouter();
+
+    const { posts, subscribeFeed } = useCommunityStore();
+
+    // gọi 1 lần khi mount
+    useEffect(() => {
+        const unsub = subscribeFeed();
+        return unsub;
+    }, []);
+
     return (
         <>
             <View style={styles.createPostContainer}>
