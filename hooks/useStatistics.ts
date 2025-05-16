@@ -14,16 +14,16 @@ export function useWeightHistory(petId: string, start: string, end: string) {
                 dt: number[] = [];
             const ref = collection(db, 'HealthLogs');
             for (let d = new Date(start); d <= new Date(end); d.setDate(d.getDate() + 1)) {
-                const iso = d.toISOString();
+                const iso = d;
                 const snap = await getDocs(
                     query(ref, where('petId', '==', petId), where('date', '==', iso))
                 );
                 if (snap.empty) {
-                    lbs.push(getDayOfWeek(iso) + '*');
+                    lbs.push(getDayOfWeek(iso.toDateString()) + '*');
                     dt.push(0);
                 } else {
                     snap.forEach((s) => {
-                        lbs.push(getDayOfWeek(iso));
+                        lbs.push(getDayOfWeek(iso.toDateString()));
                         dt.push(s.data().weight);
                     });
                 }
