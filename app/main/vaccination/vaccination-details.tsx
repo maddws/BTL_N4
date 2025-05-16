@@ -32,7 +32,7 @@ export default function VaccinationDetailsScreen() {
 
     const handleEdit = () => {
         router.push({
-            pathname: '/edit-vaccination',
+            pathname: './edit-vaccination',
             params: { id: vaccination?.id },
         });
     };

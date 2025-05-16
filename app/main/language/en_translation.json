@@ -1,0 +1,102 @@
+{
+    "booking": {
+      "title": "Book Appointment",
+      "date": "Appointment Date",
+      "time": "Appointment Time"
+    },
+    "doctor": {
+      "name": "Doctor"
+    },
+    "pet": {
+      "name": "Pet"
+    },
+    "reason": {
+      "label": "Reason for Visit",
+      "placeholder": "Symptoms, reason for visit..."
+    },
+    "submit": {
+      "booking": "Book Appointment"
+    },
+    "empty": {
+      "selectPet": "Please select a pet first"
+    },
+    "validation": {
+      "reason": "Please enter a reason for the visit"
+    },
+    "confirmation": {
+      "title": "Confirmation",
+      "success": "Appointment booked successfully!"
+    },
+    "loading": {
+      "doctorName": "Loading doctor name..."
+    },
+    "test": "Test", 
+
+    "greeting": "Hello!",
+    "greeting.sub": "Let's take care of {{name}} together!",
+    "greeting.no_pet": "Add a pet to start your care journey",
+
+    "card.health.title": "Health Tracking",
+    "card.health.description": "Track and record health metrics",
+
+    "card.activity.title": "Activity History",
+    "card.activity.description": "Manage your pet's daily activities",
+
+    "card.vaccination.title": "Vaccinations",
+    "card.vaccination.description": "Track vaccination schedule and reminders",
+    "card.vaccination.no_upcoming": "No upcoming vaccinations",
+    "card.vaccination.view_more": "View all",
+
+    "card.veterinary.title": "Veterinary Appointments",
+    "card.veterinary.description": "Manage and track veterinary appointments",
+    "card.veterinary.no_upcoming": "No upcoming appointments",
+    "card.veterinary.view_more": "View all",
+
+    "card.reminder.title": "Care Reminders",
+    "card.reminder.description": "Set reminders for pet care",
+    "card.reminder.no_upcoming": "No reminders",
+    "card.reminder.view_more": "View all",
+
+    "card.location.title": "Location Tracking",
+    "card.location.description": "Track your pet's location in real-time",
+
+    "card.interactive.title": "Interactive",
+    "card.interactive.description": "Play and interact with your pet",
+
+    "section.additional.title": "Additional Features",
+
+    "additional.nutrition": "Nutrition",
+    "additional.disease": "Diseases",
+    "additional.medical_records": "Medical Records",
+
+    "card.veterinary_contact.title": "Veterinarian" , 
+
+    "tab": {
+    "home": "Home",
+    "statistics": "Statistics",
+    "community": "Community",
+    "shop": "Shop",
+    "settings": "Settings"
+    },
+
+  "settings": {
+      "loginOrRegister": "Log in / Register",
+      "options": "Options",
+      "language": "Language",
+      "vietnamese": "Vietnamese",
+      "english": "English",
+      "darkMode": "Dark Mode",
+      "notifications": "Notifications",
+      "reminders": "Reminders",
+      "vaccinations": "Vaccinations",
+      "community": "Community",
+      "promotions": "Promotions",
+      "others": "Others",
+      "privacy": "Privacy",
+      "help": "Help",
+      "about": "About the App",
+      "logout": "Log Out"
+    }
+    
+  }
+  

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ import {
 import Colors from '@/constants/colors';
 import { useSettingsStore, Language } from '@/store/settings-store';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -32,7 +33,22 @@ export default function SettingsScreen() {
         updateNotificationSetting,
         //logout
     } = useSettingsStore();
+    // const language = useSettingsStore((state) => state.language);
+    const { i18n, t } = useTranslation();
 
+    useEffect(() => {
+        const changeLang = async () => {
+            try {
+                await i18n.changeLanguage(language);
+                console.log('Language changed:', language);
+            } catch (err) {
+                console.error('Error while changing language:', err);
+            }
+        };
+        if (language) {
+            changeLang();
+        }
+    }, [language, i18n]);
     const [showLanguageOptions, setShowLanguageOptions] = useState(false);
 
     const handleLanguageChange = (lang: Language) => {
@@ -71,15 +87,15 @@ export default function SettingsScreen() {
                 ) : (
                     <TouchableOpacity style={styles.loginSection} onPress={handleLogin}>
                         <User size={24} color={Colors.primary} />
-                        <Text style={styles.loginText}>Đăng nhập / Đăng ký</Text>
+                        <Text style={styles.loginText}>{t('settings.loginOrRegister')}</Text>
                         <ChevronRight size={20} color={Colors.textLight} />
                     </TouchableOpacity>
                 )}
-
+    
                 {/* Settings Sections */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Tùy chọn</Text>
-
+                    <Text style={styles.sectionTitle}>{t('settings.options')}</Text>
+    
                     <TouchableOpacity
                         style={styles.settingItem}
                         onPress={() => setShowLanguageOptions(!showLanguageOptions)}
@@ -88,16 +104,16 @@ export default function SettingsScreen() {
                             <Globe size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Ngôn ngữ</Text>
+                            <Text style={styles.settingLabel}>{t('settings.language')}</Text>
                             <View style={styles.settingValue}>
                                 <Text style={styles.settingValueText}>
-                                    {language === 'vi' ? 'Tiếng Việt' : 'English'}
+                                    {language === 'vi' ? t('settings.vietnamese') : t('settings.english')}
                                 </Text>
                                 <ChevronRight size={16} color={Colors.textLight} />
                             </View>
                         </View>
                     </TouchableOpacity>
-
+    
                     {showLanguageOptions && (
                         <View style={styles.languageOptions}>
                             <TouchableOpacity
@@ -113,11 +129,9 @@ export default function SettingsScreen() {
                                         language === 'vi' && styles.activeLanguageText,
                                     ]}
                                 >
-                                    Tiếng Việt
+                                    {t('settings.vietnamese')}
                                 </Text>
-                                {language === 'vi' && (
-                                    <ChevronRight size={16} color={Colors.primary} />
-                                )}
+                                {language === 'vi' && <ChevronRight size={16} color={Colors.primary} />}
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[
@@ -132,158 +146,131 @@ export default function SettingsScreen() {
                                         language === 'en' && styles.activeLanguageText,
                                     ]}
                                 >
-                                    English
+                                    {t('settings.english')}
                                 </Text>
-                                {language === 'en' && (
-                                    <ChevronRight size={16} color={Colors.primary} />
-                                )}
+                                {language === 'en' && <ChevronRight size={16} color={Colors.primary} />}
                             </TouchableOpacity>
                         </View>
                     )}
-
+    
                     <View style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Moon size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Chế độ tối</Text>
+                            <Text style={styles.settingLabel}>{t('settings.darkMode')}</Text>
                             <Switch
                                 value={darkMode}
                                 onValueChange={toggleDarkMode}
-                                trackColor={{
-                                    false: Colors.border,
-                                    true: Colors.primary + '80',
-                                }}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '80' }}
                                 thumbColor={darkMode ? Colors.primary : Colors.card}
                             />
                         </View>
                     </View>
                 </View>
-
+    
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Thông báo</Text>
-
+                    <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
+    
                     <View style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Bell size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Nhắc nhở</Text>
+                            <Text style={styles.settingLabel}>{t('settings.reminders')}</Text>
                             <Switch
                                 value={notifications.reminders}
-                                onValueChange={(value) =>
-                                    updateNotificationSetting('reminders', value)
-                                }
-                                trackColor={{
-                                    false: Colors.border,
-                                    true: Colors.primary + '80',
-                                }}
+                                onValueChange={(value) => updateNotificationSetting('reminders', value)}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '80' }}
                                 thumbColor={notifications.reminders ? Colors.primary : Colors.card}
                             />
                         </View>
                     </View>
-
+    
                     <View style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Bell size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Tiêm phòng</Text>
+                            <Text style={styles.settingLabel}>{t('settings.vaccinations')}</Text>
                             <Switch
                                 value={notifications.vaccinations}
-                                onValueChange={(value) =>
-                                    updateNotificationSetting('vaccinations', value)
-                                }
-                                trackColor={{
-                                    false: Colors.border,
-                                    true: Colors.primary + '80',
-                                }}
-                                thumbColor={
-                                    notifications.vaccinations ? Colors.primary : Colors.card
-                                }
+                                onValueChange={(value) => updateNotificationSetting('vaccinations', value)}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '80' }}
+                                thumbColor={notifications.vaccinations ? Colors.primary : Colors.card}
                             />
                         </View>
                     </View>
-
+    
                     <View style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Bell size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Cộng đồng</Text>
+                            <Text style={styles.settingLabel}>{t('settings.community')}</Text>
                             <Switch
                                 value={notifications.community}
-                                onValueChange={(value) =>
-                                    updateNotificationSetting('community', value)
-                                }
-                                trackColor={{
-                                    false: Colors.border,
-                                    true: Colors.primary + '80',
-                                }}
+                                onValueChange={(value) => updateNotificationSetting('community', value)}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '80' }}
                                 thumbColor={notifications.community ? Colors.primary : Colors.card}
                             />
                         </View>
                     </View>
-
+    
                     <View style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Bell size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Khuyến mãi</Text>
+                            <Text style={styles.settingLabel}>{t('settings.promotions')}</Text>
                             <Switch
                                 value={notifications.promotions}
-                                onValueChange={(value) =>
-                                    updateNotificationSetting('promotions', value)
-                                }
-                                trackColor={{
-                                    false: Colors.border,
-                                    true: Colors.primary + '80',
-                                }}
+                                onValueChange={(value) => updateNotificationSetting('promotions', value)}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '80' }}
                                 thumbColor={notifications.promotions ? Colors.primary : Colors.card}
                             />
                         </View>
                     </View>
                 </View>
-
+    
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Khác</Text>
-
+                    <Text style={styles.sectionTitle}>{t('settings.others')}</Text>
+    
                     <TouchableOpacity style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Shield size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Quyền riêng tư</Text>
+                            <Text style={styles.settingLabel}>{t('settings.privacy')}</Text>
                             <ChevronRight size={16} color={Colors.textLight} />
                         </View>
                     </TouchableOpacity>
-
+    
                     <TouchableOpacity style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <HelpCircle size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Trợ giúp</Text>
+                            <Text style={styles.settingLabel}>{t('settings.help')}</Text>
                             <ChevronRight size={16} color={Colors.textLight} />
                         </View>
                     </TouchableOpacity>
-
+    
                     <TouchableOpacity style={styles.settingItem}>
                         <View style={styles.settingIconContainer}>
                             <Info size={20} color={Colors.primary} />
                         </View>
                         <View style={styles.settingContent}>
-                            <Text style={styles.settingLabel}>Về ứng dụng</Text>
+                            <Text style={styles.settingLabel}>{t('settings.about')}</Text>
                             <ChevronRight size={16} color={Colors.textLight} />
                         </View>
                     </TouchableOpacity>
                 </View>
-
+    
                 {isLoggedIn && (
                     <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
                         <LogOut size={20} color={Colors.error} />
-                        <Text style={styles.logoutText}>Đăng xuất</Text>
+                        <Text style={styles.logoutText}>{t('settings.logout')}</Text>
                     </TouchableOpacity>
                 )}
             </ScrollView>

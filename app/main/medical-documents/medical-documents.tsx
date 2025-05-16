@@ -88,7 +88,7 @@ export default function MedicalDocumentsScreen() {
             style={styles.documentItem}
             onPress={() =>
                 router.push({
-                    pathname: '/medical-document-details',
+                    pathname: '/main/health/health-record-details',
                     params: { id: item.id },
                 })
             }
@@ -141,7 +141,7 @@ export default function MedicalDocumentsScreen() {
                     headerRight: () => (
                         <TouchableOpacity
                             style={styles.addButton}
-                            onPress={() => router.push('/add-medical-document')}
+                            onPress={() => router.push('/main/health/add-health-record')}
                         >
                             <Plus size={20} color={Colors.primary} />
                         </TouchableOpacity>
@@ -291,7 +291,7 @@ export default function MedicalDocumentsScreen() {
                             {searchQuery.length === 0 && activeFilter === 'all' && (
                                 <TouchableOpacity
                                     style={styles.emptyAddButton}
-                                    onPress={() => router.push('/add-medical-document')}
+                                    onPress={() => router.push('/main/health/add-health-record')}
                                 >
                                     <Text style={styles.emptyAddButtonText}>Thêm tài liệu</Text>
                                 </TouchableOpacity>

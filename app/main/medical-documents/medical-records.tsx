@@ -90,7 +90,7 @@ export default function MedicalRecordsScreen() {
                                             style={styles.recordItem}
                                             onPress={() =>
                                                 router.push({
-                                                    pathname: './health-record-details',
+                                                    pathname: '/main/health/health-record-details',
                                                     params: { id: record.id },
                                                 })
                                             }

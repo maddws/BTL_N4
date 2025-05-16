@@ -78,7 +78,7 @@ export default function MedicalDocumentDetailsScreen() {
 
     const handleEdit = () => {
         router.push({
-            pathname: '/edit-medical-document',
+            pathname: './edit-medical-document',
             params: { id: document?.id },
         });
     };
@@ -264,13 +264,13 @@ export default function MedicalDocumentDetailsScreen() {
                         <Share2 size={20} color={Colors.card} />
                         <Text style={styles.actionButtonText}>Chia sẻ</Text>
                     </TouchableOpacity>
-
+{/* 
                     {document.imageUrl && Platform.OS !== 'web' && (
                         <TouchableOpacity style={styles.actionButton}>
                             <FileDown size={20} color={Colors.card} />
                             <Text style={styles.actionButtonText}>Tải xuống</Text>
                         </TouchableOpacity>
-                    )}
+                    )} */}
                 </View>
             </ScrollView>
         </SafeAreaView>

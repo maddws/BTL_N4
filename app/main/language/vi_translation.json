@@ -1,0 +1,100 @@
+{
+    "booking": {
+      "title": "Đặt lịch khám",
+      "date": "Ngày khám",
+      "time": "Giờ khám"
+    },
+    "doctor": {
+      "name": "Bác sĩ"
+    },
+    "pet": {
+      "name": "Thú cưng"
+    },
+    "reason": {
+      "label": "Lý do khám",
+      "placeholder": "Triệu chứng, lý do khám..."
+    },
+    "submit": {
+      "booking": "Đặt lịch khám"
+    },
+    "empty": {
+      "selectPet": "Vui lòng chọn thú cưng trước"
+    },
+    "validation": {
+      "reason": "Vui lòng nhập lý do khám"
+    },
+    "confirmation": {
+      "title": "Xác nhận",
+      "success": "Đặt lịch khám thành công!"
+    },
+    "loading": {
+      "doctorName": "Đang tải tên bác sĩ..."
+    },
+    "test" : "Thử" ,
+
+    "greeting": "Xin chào!",
+    "greeting.sub": "Cùng chăm sóc {{name}} nhé!",
+    "greeting.no_pet": "Hãy thêm thú cưng để bắt đầu hành trình chăm sóc",
+  
+    "card.health.title": "Theo dõi sức khỏe",
+    "card.health.description": "Theo dõi và ghi lại chỉ số sức khỏe",
+  
+    "card.activity.title": "Lịch sử vận động",
+    "card.activity.description": "Quản lý hoạt động thường ngày của thú cưng",
+  
+    "card.vaccination.title": "Tiêm phòng",
+    "card.vaccination.description": "Theo dõi lịch tiêm và nhắc nhở",
+    "card.vaccination.no_upcoming": "Chưa có lịch tiêm phòng",
+    "card.vaccination.view_more": "Xem tất cả",
+  
+    "card.veterinary.title": "Lịch hẹn bác sĩ",
+    "card.veterinary.description": "Quản lý và theo dõi các cuộc hẹn thú y",
+    "card.veterinary.no_upcoming": "Chưa có lịch hẹn nào",
+    "card.veterinary.view_more": "Xem tất cả",
+  
+    "card.reminder.title": "Nhắc nhở chăm sóc",
+    "card.reminder.description": "Đặt lịch nhắc để chăm sóc thú cưng",
+    "card.reminder.no_upcoming": "Không có nhắc nhở nào",
+    "card.reminder.view_more": "Xem tất cả",
+  
+    "card.location.title": "Theo dõi vị trí",
+    "card.location.description": "Xác định vị trí thú cưng theo thời gian thực",
+  
+    "card.interactive.title": "Tương tác",
+    "card.interactive.description": "Chơi cùng thú cưng và tương tác vui vẻ",
+  
+    "section.additional.title": "Tiện ích thêm",
+  
+    "additional.nutrition": "Dinh dưỡng",
+    "additional.disease": "Bệnh lý",
+    "additional.medical_records": "Hồ sơ y tế",
+  
+    "card.veterinary_contact.title": "Bác sĩ thú y" ,
+
+    "tab": {
+      "home": "Trang chủ",
+      "statistics": "Thống kê",
+      "community": "Cộng đồng",
+      "shop": "Cửa hàng",
+      "settings": "Cài đặt"
+    },
+  "settings": {
+      "loginOrRegister": "Đăng nhập / Đăng ký",
+      "options": "Tùy chọn",
+      "language": "Ngôn ngữ",
+      "vietnamese": "Tiếng Việt",
+      "english": "English",
+      "darkMode": "Chế độ tối",
+      "notifications": "Thông báo",
+      "reminders": "Nhắc nhở",
+      "vaccinations": "Tiêm phòng",
+      "community": "Cộng đồng",
+      "promotions": "Khuyến mãi",
+      "others": "Khác",
+      "privacy": "Quyền riêng tư",
+      "help": "Trợ giúp",
+      "about": "Về ứng dụng",
+      "logout": "Đăng xuất"
+    }
+  }
+  

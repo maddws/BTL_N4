@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { db } from '@/config/firebase';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+    Calendar,
     Activity,
     Syringe,
     Bell,
@@ -14,6 +15,8 @@ import {
     FileText,
     HeartPulse,
     ChevronRight,
+    Cross,
+    
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
@@ -21,9 +24,22 @@ import HomeCard from '@/components/HomeCard';
 import ReminderItem from '@/components/ReminderItem';
 import VaccinationItem from '@/components/VaccinationItem';
 import { usePetStore } from '@/store/pet-store';
-
+import AppointmentItem from '@/components/AppointmentItem'; 
 import type { UserDoc } from '@/types/pet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAppointmentsByPetId } from '@/store/appointment';
+import type { Appointment } from '@/store/appointment';
+import { useSettingsStore } from '@/store/settings-store';
+import { useTranslation } from 'react-i18next';
+
+
+
+import '@/config/i18n'; // <- Phải có dòng này, KHÔNG COMMENT
+import { AppRegistry } from 'react-native';
+import App from '../(tabs)/index'; // Đường dẫn đến file chính của bạn
+
+AppRegistry.registerComponent('main', () => App);
+
 
 export default function HomeScreen() {
     // const user = db.collection('Users').get().then(snapshot => {
@@ -31,14 +47,46 @@ export default function HomeScreen() {
     //         console.log(doc.id, '=>', doc.data());
     //     });
     // });
+    const language = useSettingsStore((state) => state.language);
+    const { i18n, t } = useTranslation();
 
+    useEffect(() => {
+        const changeLang = async () => {
+            try {
+                await i18n.changeLanguage(language);
+                console.log('Language changed:', language);
+            } catch (err) {
+                console.error('Error while changing language:', err);
+            }
+        };
+        if (language) {
+            changeLang();
+        }
+    }, [language, i18n]);
     const router = useRouter();
     const { getActivePet, fetchUserPets, getUpcomingReminders, getUpcomingVaccinations } =
         usePetStore();
 
-    // fetchUserPets('ZJ32TSDqbggFVDIIFFeL');
     const activePet = getActivePet();
-    // console.log(activePet);
+
+    
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+    useEffect(() => {
+        if (!activePet) return;
+
+        const fetchAppointments = async () => {
+            try {
+                const data = await getAppointmentsByPetId(activePet.id);
+                setAppointments(data);
+            } catch (error) {
+                console.error('Lỗi tải lịch hẹn:', error);
+            }
+        };
+
+        fetchAppointments();
+    }, [activePet]);
+    
     const upcomingReminders = getUpcomingReminders(7);
     const upcomingVaccinations = getUpcomingVaccinations(30);
 
@@ -46,35 +94,35 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.container} edges={['right', 'left']}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
-                    <Text style={styles.greeting}>Xin chào!</Text>
+                    <Text style={styles.greeting}>{t('greeting')}</Text>
                     <Text style={styles.subGreeting}>
                         {activePet
-                            ? `Chăm sóc cho ${activePet.name} nào`
-                            : 'Hãy thêm thú cưng của bạn'}
+                            ? `${t('greeting.sub', { name: activePet.name })}`
+                            : t('greeting.no_pet')}
                     </Text>
                 </View>
-
+    
                 <PetSelector />
-
+    
                 <View style={styles.content}>
                     {/* Main Features */}
                     <HomeCard
-                        title="Theo dõi sức khỏe"
+                        title={t('card.health.title')}
                         icon={<HeartPulse size={20} color={Colors.primary} />}
-                        description="Ghi lại các chỉ số sức khỏe của thú cưng"
+                        description={t('card.health.description')}
                         onPress={() => router.push('/main/health/health')}
                     />
                     <HomeCard
-                        title="Lịch sử hoạt động"
+                        title={t('card.activity.title')}
                         icon={<Activity size={20} color={Colors.primary} />}
-                        description="Ghi lại lịch sử hoạt động của thú cưng"
+                        description={t('card.activity.description')}
                         onPress={() => router.push('/main/activity/activity')}
                     />
-
+    
                     <HomeCard
-                        title="Lịch tiêm phòng"
+                        title={t('card.vaccination.title')}
                         icon={<Syringe size={20} color={Colors.primary} />}
-                        description="Quản lý lịch tiêm phòng và nhắc nhở"
+                        description={t('card.vaccination.description')}
                         onPress={() => router.push('/main/vaccination/vaccinations')}
                     >
                         {upcomingVaccinations.length > 0 ? (
@@ -92,20 +140,51 @@ export default function HomeScreen() {
                                             router.push('/main/vaccination/vaccinations')
                                         }
                                     >
-                                        <Text style={styles.viewMoreText}>Xem thêm</Text>
+                                        <Text style={styles.viewMoreText}>
+                                            {t('card.vaccination.view_more')}
+                                        </Text>
                                         <ChevronRight size={16} color={Colors.primary} />
                                     </TouchableOpacity>
                                 )}
                             </>
                         ) : (
-                            <Text style={styles.emptyText}>Không có lịch tiêm phòng sắp tới</Text>
+                            <Text style={styles.emptyText}>{t('card.vaccination.no_upcoming')}</Text>
                         )}
                     </HomeCard>
-
                     <HomeCard
-                        title="Nhắc nhở chăm sóc"
+                        title={t('card.veterinary.title')}
+                        icon={<Cross size={20} color={Colors.primary} />}
+                        description={t('card.veterinary.description')}
+                        onPress={() => router.push('/main/veterinary/veterinary')}
+                    >
+                        {appointments.length > 0 ? (
+                            <>
+                                {appointments.slice(0, 2).map((appointment) => (
+                                    <AppointmentItem
+                                        key={appointment.id}
+                                        appointment={appointment}
+                                    />
+                                ))}
+                                {appointments.length > 2 && (
+                                    <TouchableOpacity
+                                        style={styles.viewMoreButton}
+                                        onPress={() => router.push('/main/veterinary/veterinary')}
+                                    >
+                                        <Text style={styles.viewMoreText}>
+                                            {t('card.veterinary.view_more')}
+                                        </Text>
+                                        <ChevronRight size={16} color={Colors.primary} />
+                                    </TouchableOpacity>
+                                )}
+                            </>
+                        ) : (
+                            <Text style={styles.emptyText}>{t('card.veterinary.no_upcoming')}</Text>
+                        )}
+                    </HomeCard>
+                    <HomeCard
+                        title={t('card.reminder.title')}
                         icon={<Bell size={20} color={Colors.primary} />}
-                        description="Đặt lịch nhắc cho các hoạt động chăm sóc"
+                        description={t('card.reminder.description')}
                         onPress={() => router.push('/main/reminder/reminders')}
                     >
                         {upcomingReminders.length > 0 ? (
@@ -118,33 +197,35 @@ export default function HomeScreen() {
                                         style={styles.viewMoreButton}
                                         onPress={() => router.push('/main/reminder/reminders')}
                                     >
-                                        <Text style={styles.viewMoreText}>Xem thêm</Text>
+                                        <Text style={styles.viewMoreText}>
+                                            {t('card.reminder.view_more')}
+                                        </Text>
                                         <ChevronRight size={16} color={Colors.primary} />
                                     </TouchableOpacity>
                                 )}
                             </>
                         ) : (
-                            <Text style={styles.emptyText}>Không có nhắc nhở nào sắp tới</Text>
+                            <Text style={styles.emptyText}>{t('card.reminder.no_upcoming')}</Text>
                         )}
                     </HomeCard>
-
+    
                     <HomeCard
-                        title="Theo dõi vị trí"
+                        title={t('card.location.title')}
                         icon={<MapPin size={20} color={Colors.primary} />}
-                        description="Theo dõi vị trí thú cưng của bạn"
+                        description={t('card.location.description')}
                         onPress={() => router.push('/main/location/location')}
                     />
-
+    
                     <HomeCard
-                        title="Tương tác"
+                        title={t('card.interactive.title')}
                         icon={<Gamepad size={20} color={Colors.primary} />}
-                        description="Các trò chơi và hoạt động tương tác"
+                        description={t('card.interactive.description')}
                         onPress={() => router.push('/main/interactive/music-player')}
                     />
-
+    
                     {/* Additional Features */}
-                    <Text style={styles.sectionTitle}>Thông tin hữu ích</Text>
-
+                    <Text style={styles.sectionTitle}>{t('section.additional.title')}</Text>
+    
                     <View style={styles.additionalFeatures}>
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
@@ -153,9 +234,11 @@ export default function HomeScreen() {
                             <View style={styles.additionalFeatureIcon}>
                                 <Apple size={20} color={Colors.primary} />
                             </View>
-                            <Text style={styles.additionalFeatureText}>Dinh dưỡng</Text>
+                            <Text style={styles.additionalFeatureText}>
+                                {t('additional.nutrition')}
+                            </Text>
                         </TouchableOpacity>
-
+    
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
                             onPress={() => router.push('/main/disease/diseases')}
@@ -163,9 +246,11 @@ export default function HomeScreen() {
                             <View style={styles.additionalFeatureIcon}>
                                 <Stethoscope size={20} color={Colors.primary} />
                             </View>
-                            <Text style={styles.additionalFeatureText}>Bệnh lý</Text>
+                            <Text style={styles.additionalFeatureText}>
+                                {t('additional.disease')}
+                            </Text>
                         </TouchableOpacity>
-
+    
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
                             onPress={() => router.push('/main/medical-documents/medical-records')}
@@ -173,13 +258,28 @@ export default function HomeScreen() {
                             <View style={styles.additionalFeatureIcon}>
                                 <FileText size={20} color={Colors.primary} />
                             </View>
-                            <Text style={styles.additionalFeatureText}>Hồ sơ y tế</Text>
+                            <Text style={styles.additionalFeatureText}>
+                                {t('additional.medical_records')}
+                            </Text>
+                        </TouchableOpacity>
+    
+                        <TouchableOpacity
+                            style={styles.additionalFeatureItem}
+                            onPress={() => router.push('/main/veterinary/veterinary_contact')}
+                        >
+                            <View style={styles.additionalFeatureIcon}>
+                                <Cross size={24} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.additionalFeatureText}>
+                                {t('card.veterinary_contact.title')}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
+    
 }
 
 const styles = StyleSheet.create({
@@ -214,6 +314,7 @@ const styles = StyleSheet.create({
     },
     additionalFeatures: {
         flexDirection: 'row',
+        flexWrap: 'wrap', 
         justifyContent: 'space-between',
     },
     additionalFeatureItem: {
