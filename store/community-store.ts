@@ -277,15 +277,21 @@ export const useCommunityStore = create<CommunityState>()(
             toggleLike: (postId) =>
                 set((state) => ({
                     posts: state.posts.map((post) =>
-                        post.id === postId
-                            ? {
-                                  ...post,
-                                  isLiked: !post.isLiked,
-                                  likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-                              }
-                            : post
+                        post.id === postId ? { ...post, isLiked: !post.isLiked } : post
                     ),
                 })),
+            // toggleLike: (postId) =>
+            //     set((state) => ({
+            //         posts: state.posts.map((post) =>
+            //             post.id === postId
+            //                 ? {
+            //                       ...post,
+            //                       isLiked: !post.isLiked,
+            //                       likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+            //                   }
+            //                 : post
+            //         ),
+            //     })),
 
             toggleSave: (postId) =>
                 set((state) => {
