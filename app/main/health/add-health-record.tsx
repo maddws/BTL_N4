@@ -13,6 +13,7 @@ import { Stack, useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { usePetStore } from '@/store/pet-store';
 import DatePicker from '@/components/DatePicker';
+import { Timestamp } from 'firebase/firestore';
 
 export default function AddHealthRecordScreen() {
     const router = useRouter();
@@ -66,9 +67,11 @@ export default function AddHealthRecordScreen() {
         if (!validateForm() || !activePet) return;
 
         // Lấy dữ liệu từ form và gọi phương thức thêm bản ghi sức khoẻ vào Firestore
+        console.log('raw date', date);
+        console.log('formatted date', Timestamp.fromDate(date));
         await addHealthRecord({
             petId: activePet.id,
-            date: date.toISOString().split('T')[0],
+            date: Timestamp.fromDate(date),
             weight: Number(weight),
             symptoms: symptoms.trim() || undefined,
             diagnosis: diagnosis.trim() || undefined,

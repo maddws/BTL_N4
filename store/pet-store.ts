@@ -142,7 +142,7 @@ export const usePetStore = create<PetState>()(
                     // Ensuring that optional fields like symptoms, diagnosis, etc. are not undefined
                     const newRecord = {
                         ...record,
-                        date: new Date(record.date).toISOString(), // Ensure the date is in ISO format
+                        date: record.date, // Ensure the date is in ISO format
                         symptoms: record.symptoms?.trim() || null, // If symptoms is empty, set it as null
                         diagnosis: record.diagnosis?.trim() || null, // If diagnosis is empty, set it as null
                         treatment: record.treatment?.trim() || null, // If treatment is empty, set it as null

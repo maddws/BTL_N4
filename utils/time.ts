@@ -23,6 +23,20 @@ export function formatTime(timestamp) {
         return `${diffDays} ngày trước`;
     }
 }
+export function formatDate(timestamp) {
+    console.log('timestamp:', timestamp);
+    if (!timestamp) {
+        console.log('timestamp:', timestamp);
+        return 'NaN'; // Trả về giá trị mặc định nếu timestamp không hợp lệ
+    }
+    const ts: Timestamp = timestamp as Timestamp;
+    const date = ts.toDate(); // Chuyển đổi Firestore timestamp thành đối tượng Date
+    return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+}
 
 export function toDMY(timestamp) {
     // console.log('timestamp:', new Date(timestamp).getTime());

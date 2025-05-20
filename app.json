@@ -1,42 +1,49 @@
 {
-    "expo": {
-        "name": "PetCare",
-        "slug": "petcare",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "icon": "./assets/images/icon.png",
-        "scheme": "petcare",
-        "userInterfaceStyle": "automatic",
-        "newArchEnabled": true,
-        "assetBundlePatterns": ["**/*", "locales/**/*.json"],
-        "splash": {
-            "image": "./assets/images/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#ffffff"
-        },
-        "ios": {
-            "bundleDisplayName": "PetCare",
-            "supportsTablet": true
-        },
-        "android": {
-            "label": "PetCare",
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/images/adaptive-icon.png",
-                "backgroundColor": "#ffffff"
-            },
-            "package": "com.anonymous.expoapp"
-        },
-        "plugins": ["expo-router", "expo-build-properties"],
-        "experiments": {
-            "typedRoutes": true
-        },
-        "extra": {
-            "router": {
-                "origin": false
-            },
-            "eas": {
-                "projectId": "dda274ff-6231-447b-b04e-1aa7400747dd"
-            }
-        }
+  "expo": {
+    "name": "PetCare",
+    "slug": "petcare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "petcare",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "**/*",
+      "locales/**/*.json"
+    ],
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleDisplayName": "PetCare",
+      "supportsTablet": true
+    },
+    "android": {
+      "label": "PetCare",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.anonymous.expoapp"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-build-properties",
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "dda274ff-6231-447b-b04e-1aa7400747dd"
+      }
     }
+  }
 }

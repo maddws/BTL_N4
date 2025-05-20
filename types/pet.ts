@@ -32,7 +32,7 @@ export interface Pet {
 export interface HealthRecord {
     id: string;
     petId: string;
-    date: string;
+    date: any; // Use Timestamp for date
     weight: number;
     symptoms?: string | null; // Allow null instead of undefined
     diagnosis?: string | null; // Allow null instead of undefined

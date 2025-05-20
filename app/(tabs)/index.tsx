@@ -16,7 +16,6 @@ import {
     HeartPulse,
     ChevronRight,
     Cross,
-    
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
@@ -24,7 +23,7 @@ import HomeCard from '@/components/HomeCard';
 import ReminderItem from '@/components/ReminderItem';
 import VaccinationItem from '@/components/VaccinationItem';
 import { usePetStore } from '@/store/pet-store';
-import AppointmentItem from '@/components/AppointmentItem'; 
+import AppointmentItem from '@/components/AppointmentItem';
 import type { UserDoc } from '@/types/pet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAppointmentsByPetId } from '@/store/appointment';
@@ -32,14 +31,11 @@ import type { Appointment } from '@/store/appointment';
 import { useSettingsStore } from '@/store/settings-store';
 import { useTranslation } from 'react-i18next';
 
-
-
 import '@/config/i18n'; // <- Phải có dòng này, KHÔNG COMMENT
 import { AppRegistry } from 'react-native';
 import App from '../(tabs)/index'; // Đường dẫn đến file chính của bạn
 
 AppRegistry.registerComponent('main', () => App);
-
 
 export default function HomeScreen() {
     // const user = db.collection('Users').get().then(snapshot => {
@@ -49,6 +45,9 @@ export default function HomeScreen() {
     // });
     const language = useSettingsStore((state) => state.language);
     const { i18n, t } = useTranslation();
+
+    console.log('i18n resources:', i18n.getDataByLanguage('vi')?.translation);
+    console.log('t(tab.home)=', i18n.t('tab.home'));
 
     useEffect(() => {
         const changeLang = async () => {
@@ -69,7 +68,6 @@ export default function HomeScreen() {
 
     const activePet = getActivePet();
 
-    
     const [appointments, setAppointments] = useState<Appointment[]>([]);
 
     useEffect(() => {
@@ -86,7 +84,7 @@ export default function HomeScreen() {
 
         fetchAppointments();
     }, [activePet]);
-    
+
     const upcomingReminders = getUpcomingReminders(7);
     const upcomingVaccinations = getUpcomingVaccinations(30);
 
@@ -101,9 +99,9 @@ export default function HomeScreen() {
                             : t('greeting.no_pet')}
                     </Text>
                 </View>
-    
+
                 <PetSelector />
-    
+
                 <View style={styles.content}>
                     {/* Main Features */}
                     <HomeCard
@@ -118,7 +116,7 @@ export default function HomeScreen() {
                         description={t('card.activity.description')}
                         onPress={() => router.push('/main/activity/activity')}
                     />
-    
+
                     <HomeCard
                         title={t('card.vaccination.title')}
                         icon={<Syringe size={20} color={Colors.primary} />}
@@ -148,7 +146,9 @@ export default function HomeScreen() {
                                 )}
                             </>
                         ) : (
-                            <Text style={styles.emptyText}>{t('card.vaccination.no_upcoming')}</Text>
+                            <Text style={styles.emptyText}>
+                                {t('card.vaccination.no_upcoming')}
+                            </Text>
                         )}
                     </HomeCard>
                     <HomeCard
@@ -208,24 +208,24 @@ export default function HomeScreen() {
                             <Text style={styles.emptyText}>{t('card.reminder.no_upcoming')}</Text>
                         )}
                     </HomeCard>
-    
+
                     <HomeCard
                         title={t('card.location.title')}
                         icon={<MapPin size={20} color={Colors.primary} />}
                         description={t('card.location.description')}
                         onPress={() => router.push('/main/location/location')}
                     />
-    
+
                     <HomeCard
                         title={t('card.interactive.title')}
                         icon={<Gamepad size={20} color={Colors.primary} />}
                         description={t('card.interactive.description')}
                         onPress={() => router.push('/main/interactive/music-player')}
                     />
-    
+
                     {/* Additional Features */}
                     <Text style={styles.sectionTitle}>{t('section.additional.title')}</Text>
-    
+
                     <View style={styles.additionalFeatures}>
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
@@ -238,7 +238,7 @@ export default function HomeScreen() {
                                 {t('additional.nutrition')}
                             </Text>
                         </TouchableOpacity>
-    
+
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
                             onPress={() => router.push('/main/disease/diseases')}
@@ -250,7 +250,7 @@ export default function HomeScreen() {
                                 {t('additional.disease')}
                             </Text>
                         </TouchableOpacity>
-    
+
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
                             onPress={() => router.push('/main/medical-documents/medical-records')}
@@ -262,7 +262,7 @@ export default function HomeScreen() {
                                 {t('additional.medical_records')}
                             </Text>
                         </TouchableOpacity>
-    
+
                         <TouchableOpacity
                             style={styles.additionalFeatureItem}
                             onPress={() => router.push('/main/veterinary/veterinary_contact')}
@@ -279,7 +279,6 @@ export default function HomeScreen() {
             </ScrollView>
         </SafeAreaView>
     );
-    
 }
 
 const styles = StyleSheet.create({
@@ -314,7 +313,7 @@ const styles = StyleSheet.create({
     },
     additionalFeatures: {
         flexDirection: 'row',
-        flexWrap: 'wrap', 
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
     },
     additionalFeatureItem: {

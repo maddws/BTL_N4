@@ -5,6 +5,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Edit2, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePetStore } from '@/store/pet-store';
+import { formatDate } from '@/utils/time'; // Assuming you have a utility function for formatting dates
 
 export default function HealthRecordDetailsScreen() {
     const router = useRouter();
@@ -14,10 +15,10 @@ export default function HealthRecordDetailsScreen() {
     const record = healthRecords.find((r) => r.id === id);
     const pet = record ? pets.find((p) => p.id === record.petId) : undefined;
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN');
-    };
+    // const formatDate = (dateString: string) => {
+    //     const date = new Date(dateString);
+    //     return date.toLocaleDateString('vi-VN');
+    // };
 
     const handleEdit = () => {
         router.push({

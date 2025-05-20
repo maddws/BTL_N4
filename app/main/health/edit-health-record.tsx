@@ -13,6 +13,8 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import Colors from '@/constants/colors';
 import { usePetStore } from '@/store/pet-store';
 import DatePicker from '@/components/DatePicker';
+import { formatDate } from '@/utils/time';
+import { Timestamp } from 'firebase/firestore';
 
 export default function EditHealthRecordScreen() {
     const router = useRouter();
@@ -35,8 +37,9 @@ export default function EditHealthRecordScreen() {
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
+        console.log(record);
         if (record) {
-            setDate(new Date(record.date));
+            setDate(record.date.toDate());
             setWeight(record.weight.toString());
             setSymptoms(record.symptoms || '');
             setDiagnosis(record.diagnosis || '');
@@ -68,7 +71,7 @@ export default function EditHealthRecordScreen() {
         // console.log('idwtffr', record.id);
         await updateHealthRecord(record.id, {
             petId: record.petId,
-            date: date.toISOString(),
+            date: Timestamp.fromDate(date),
             weight: Number(weight),
             symptoms: symptoms.trim() || null,
             diagnosis: diagnosis.trim() || null,

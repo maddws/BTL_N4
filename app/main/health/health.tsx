@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatDate } from '@/utils/time';
 import { Stack, useRouter } from 'expo-router';
 import { Activity, Plus, Weight, Stethoscope, FileText } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import PetSelector from '@/components/PetSelector';
 import { usePetStore } from '@/store/pet-store';
 import { db } from '@/config/firebase';
-import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { HealthRecord } from '@/types/pet';
 
 export default function HealthScreen() {
@@ -51,10 +52,10 @@ export default function HealthScreen() {
     }, [activePet]);
 
     // Format date
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN');
-    };
+    // const formatDate = (dateString: string) => {
+    //     const date = new Date(dateString);
+    //     return date.toLocaleDateString('vi-VN');
+    // };
 
     return (
         <SafeAreaView style={styles.container} edges={['right', 'left']}>
@@ -104,7 +105,8 @@ export default function HealthScreen() {
                                 healthRecords
                                     .sort(
                                         (a, b) =>
-                                            new Date(b.date).getTime() - new Date(a.date).getTime()
+                                            new Date(formatDate(b.date)).getTime() -
+                                            new Date(formatDate(a.date)).getTime()
                                     )
                                     .map((record) => (
                                         <TouchableOpacity
@@ -126,7 +128,7 @@ export default function HealthScreen() {
                                             </View>
                                             <View style={styles.recordContent}>
                                                 <Text style={styles.recordDate}>
-                                                    {formatDate(record.date)}
+                                                    {formatDate(record.date as Timestamp)}
                                                 </Text>
                                                 <Text style={styles.recordWeight}>
                                                     Cân nặng: {record.weight} kg

@@ -23,6 +23,7 @@ export default function StatisticsScreen() {
     const { label, kcalData, timeData } = useActivityStats(pet?.id!, pet?.weight || 0, start, end);
     console.log('kcalData', kcalData);
     console.log('timeData', timeData);
+    console.log('weightData', weight);
 
     if (!pet) return null;
 

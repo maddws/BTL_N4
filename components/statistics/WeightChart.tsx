@@ -37,7 +37,7 @@ export default function WeightChart({ labels, data }: { labels: string[]; data: 
 
             <LineChart
                 data={weightDataVisualize}
-                width={w - 50}
+                width={w - 20}
                 yAxisSuffix=" kg"
                 height={200}
                 chartConfig={{
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     chart: {
         borderRadius: 16,
         marginVertical: 0,
-        marginHorizontal: -10,
+        marginHorizontal: -8,
     },
     activityLegend: {
         flexDirection: 'row',
